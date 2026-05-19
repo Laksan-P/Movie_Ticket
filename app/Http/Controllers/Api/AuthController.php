@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Api\Concerns\RespondsWithJson;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -10,6 +11,8 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    use RespondsWithJson;
+
     public function login(Request $request)
     {
         $request->validate([
@@ -30,7 +33,7 @@ class AuthController extends Controller
 
         $tokenName = $request->input('device_name', 'api-token');
 
-        return response()->json([
+        return $this->jsonSuccess('Login successful.', [
             'token' => $user->createToken($tokenName)->plainTextToken,
             'user' => $user,
         ]);
@@ -55,8 +58,7 @@ class AuthController extends Controller
 
         $tokenName = $request->input('device_name', 'api-token');
 
-        return response()->json([
-            'message' => 'User registered successfully',
+        return $this->jsonSuccess('User registered successfully.', [
             'token' => $user->createToken($tokenName)->plainTextToken,
             'user' => $user,
         ], 201);
@@ -74,8 +76,6 @@ class AuthController extends Controller
             $request->session()->regenerateToken();
         }
 
-        return response()->json([
-            'message' => 'Logged out successfully',
-        ]);
+        return $this->jsonSuccess('Logged out successfully.');
     }
 }

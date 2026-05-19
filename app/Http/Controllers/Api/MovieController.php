@@ -2,23 +2,35 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Api\Concerns\RespondsWithJson;
 use App\Http\Controllers\Controller;
 use App\Models\Movie;
-use Illuminate\Http\Request;
 
 class MovieController extends Controller
 {
+    use RespondsWithJson;
+
     public function index()
     {
-        return response()->json(Movie::where('is_active', true)->get());
+        $movies = Movie::where('is_active', true)->orderBy('title')->get();
+
+        return $this->jsonSuccess('Movies retrieved successfully.', [
+            'movies' => $movies,
+        ]);
     }
 
-    public function show($id)
+    public function show(int $id)
     {
-        $movie = Movie::with('showtimes.theatre')->find($id);
-        if (!$movie) {
-            return response()->json(['message' => 'Movie not found'], 404);
+        $movie = Movie::with(['showtimes' => function ($query) {
+            $query->with('theatre')->where('showtime', '>=', now())->orderBy('showtime');
+        }])->find($id);
+
+        if (! $movie) {
+            return $this->jsonError('Movie not found.', 404);
         }
-        return response()->json($movie);
+
+        return $this->jsonSuccess('Movie retrieved successfully.', [
+            'movie' => $movie,
+        ]);
     }
 }

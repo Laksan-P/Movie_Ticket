@@ -34,39 +34,98 @@ A robust and secure web-based movie booking application built with Laravel 12. T
 
 ## API Endpoints
 
-Base URL: `/api`
+Base URL: `{{APP_URL}}/api` (e.g. `http://localhost:8000/api`)
 
-| Method | Endpoint | Auth (Bearer token) | Description |
-|--------|----------|-------------------|-------------|
-| POST | `/register` | No | Register a user; returns Sanctum token and user JSON (201). |
-| POST | `/login` | No | Login; returns Sanctum token and user JSON (200). Optional `device_name` (defaults to `api-token`). |
-| POST | `/logout` | Yes | Revoke current token and end session (200). |
-| GET | `/movies` | No | List active movies (200). |
-| GET | `/movies/{id}` | No | View a single movie with showtimes (200/404). |
-| GET | `/user` | Yes | Authenticated user profile (200). |
-| GET | `/bookings` | Yes | List authenticated user's bookings (200). |
-| POST | `/bookings` | Yes | Create booking with `showtime_id`, `seats`, `number_of_tickets` (201/422). |
-| POST | `/bookings/{booking}/confirm` | Yes | Confirm mock payment (200/403/422). |
-| POST | `/bookings/{booking}/cancel` | Yes | Cancel booking with `reason`, optional `comments` (200/403/422). |
+All API responses use JSON with a consistent shape:
 
-**Authentication header (protected routes):**
+- **Success:** `{ "message": "...", "data": { ... } }` (HTTP `200` or `201`)
+- **Error:** `{ "message": "...", "errors": { ... } }` (optional `errors` on validation failures)
+
+### Authentication
+
+Protected routes require:
 
 ```
 Authorization: Bearer {your-sanctum-token}
 Accept: application/json
+Content-Type: application/json
 ```
 
-**Example register response:**
+### Endpoint reference
+
+| Method | Endpoint | Auth required? | Description | Example request body |
+|--------|----------|----------------|-------------|----------------------|
+| POST | `/register` | No | Register a new user; returns token and user in `data` | `{ "name", "email", "password", "password_confirmation", "device_name?" }` |
+| POST | `/login` | No | Login; returns token and user in `data` | `{ "email", "password", "device_name?" }` |
+| POST | `/logout` | Yes | Revoke current API token | — |
+| GET | `/user` | Yes | Get authenticated user profile | — |
+| GET | `/movies` | No | List all active movies | — |
+| GET | `/movies/{id}` | No | View one movie with upcoming showtimes | — |
+| GET | `/bookings` | Yes | List current user's bookings | — |
+| POST | `/bookings` | Yes | Create a pending booking | `{ "showtime_id", "seats": "A1,A2", "number_of_tickets" }` |
+| POST | `/bookings/{booking}/confirm` | Yes | Confirm mock payment | `{ "payment_method?", "card_number?" }` |
+| POST | `/bookings/{booking}/cancel` | Yes | Cancel booking (50% refund) | `{ "reason", "comments?" }` |
+
+### HTTP status codes
+
+| Code | Meaning |
+|------|---------|
+| `200` | Success |
+| `201` | Created (register, create booking) |
+| `401` | Unauthenticated (missing/invalid token) |
+| `403` | Forbidden (e.g. another user's booking) |
+| `404` | Resource or endpoint not found |
+| `422` | Validation error (`errors` object included) |
+
+### Example success response (login)
 
 ```json
 {
-  "message": "User registered successfully",
-  "token": "1|...",
-  "user": { "id": 1, "name": "...", "email": "..." }
+  "message": "Login successful.",
+  "data": {
+    "token": "1|plainTextToken...",
+    "user": {
+      "id": 1,
+      "name": "API Tester",
+      "email": "api.tester@example.com"
+    }
+  }
 }
 ```
 
-**Error responses:** `401` unauthenticated, `403` forbidden, `404` not found, `422` validation errors (with `errors` object).
+### Example error response (validation)
+
+```json
+{
+  "message": "Validation failed.",
+  "errors": {
+    "email": ["The email field is required."]
+  }
+}
+```
+
+### Postman collection
+
+Import `docs/moviebuff-api-postman-collection.json` into Postman. Collection variables:
+
+- `{{base_url}}` — e.g. `http://localhost:8000/api`
+- `{{token}}` — set automatically after Register/Login
+- `{{movie_id}}`, `{{showtime_id}}`, `{{booking_id}}` — adjust per your database
+
+---
+
+## API Testing Flow
+
+1. **Register** — `POST /api/register` with name, email, password, and `password_confirmation`. Copy `data.token` from the response (or use the Postman test script).
+2. **Login** (optional) — `POST /api/login` if you already have an account; copy the Bearer token.
+3. **Set Authorization** — In Postman or your client, add header `Authorization: Bearer {token}` for protected routes.
+4. **Get user** — `GET /api/user` to verify the token works.
+5. **List movies** — `GET /api/movies` (public).
+6. **View movie** — `GET /api/movies/{id}` to see showtimes; note a `showtime_id`.
+7. **Create booking** — `POST /api/bookings` with `showtime_id`, comma-separated `seats`, and `number_of_tickets`. Save `data.booking.id`.
+8. **Confirm payment** — `POST /api/bookings/{booking}/confirm` with optional mock card fields.
+9. **Cancel booking** — `POST /api/bookings/{booking}/cancel` with `reason` and optional `comments`.
+10. **Logout** — `POST /api/logout` to revoke the token.
 
 ---
 

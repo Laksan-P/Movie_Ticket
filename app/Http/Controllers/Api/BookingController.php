@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Api\Concerns\RespondsWithJson;
 use App\Http\Controllers\Concerns\AuthorizesBookingOwnership;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
@@ -12,6 +13,7 @@ use Illuminate\Validation\ValidationException;
 class BookingController extends Controller
 {
     use AuthorizesBookingOwnership;
+    use RespondsWithJson;
 
     public function __construct(
         protected BookingService $bookingService
@@ -24,7 +26,9 @@ class BookingController extends Controller
             ->latest()
             ->get();
 
-        return response()->json($bookings);
+        return $this->jsonSuccess('Bookings retrieved successfully.', [
+            'bookings' => $bookings,
+        ]);
     }
 
     public function store(Request $request)
@@ -32,7 +36,7 @@ class BookingController extends Controller
         $request->validate([
             'showtime_id' => 'required|exists:showtimes,id',
             'seats' => 'required|string',
-            'number_of_tickets' => 'required|numeric|min:1',
+            'number_of_tickets' => 'required|integer|min:1',
         ]);
 
         try {
@@ -43,15 +47,13 @@ class BookingController extends Controller
                 (int) $request->number_of_tickets
             );
         } catch (ValidationException $e) {
-            return response()->json([
-                'message' => 'Validation failed.',
-                'errors' => $e->errors(),
-            ], 422);
+            return $this->jsonError('Validation failed.', 422, $e->errors());
         }
 
-        return response()->json([
-            'message' => 'Booking initiated successfully',
-            'booking' => $booking->load('showtime.movie', 'showtime.theatre'),
+        $booking->load('showtime.movie', 'showtime.theatre');
+
+        return $this->jsonSuccess('Booking initiated successfully.', [
+            'booking' => $booking,
         ], 201);
     }
 
@@ -71,10 +73,15 @@ class BookingController extends Controller
             'card_number',
         ]));
 
-        return response()->json([
-            'message' => $result['message'],
+        $payload = [
             'booking' => $result['booking'] ?? $booking->load('showtime.movie', 'showtime.theatre'),
-        ], $result['status']);
+        ];
+
+        if ($result['success']) {
+            return $this->jsonSuccess($result['message'], $payload, $result['status']);
+        }
+
+        return $this->jsonError($result['message'], $result['status'], null);
     }
 
     public function cancelBooking(Request $request, Booking $booking)
@@ -84,8 +91,8 @@ class BookingController extends Controller
         }
 
         $request->validate([
-            'reason' => 'required|string',
-            'comments' => 'nullable|string',
+            'reason' => 'required|string|max:255',
+            'comments' => 'nullable|string|max:1000',
         ]);
 
         $result = $this->bookingService->cancelBooking(
@@ -94,11 +101,18 @@ class BookingController extends Controller
             $request->comments
         );
 
-        $payload = ['message' => $result['message']];
+        $data = [];
         if (isset($result['refund_amount'])) {
-            $payload['refund_amount'] = $result['refund_amount'];
+            $data['refund_amount'] = $result['refund_amount'];
+        }
+        if (isset($result['booking'])) {
+            $data['booking'] = $result['booking'];
         }
 
-        return response()->json($payload, $result['status']);
+        if ($result['success']) {
+            return $this->jsonSuccess($result['message'], $data ?: null, $result['status']);
+        }
+
+        return $this->jsonError($result['message'], $result['status'], null);
     }
 }
