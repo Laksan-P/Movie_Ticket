@@ -128,7 +128,7 @@ class BookingService
             $newAvailable = max(0, $showtime->available_seats - $booking->number_of_tickets);
             $showtime->update(['available_seats' => $newAvailable]);
 
-            $this->recordMockPayment($booking, $paymentInput);
+            $this->recordPayment($booking, $paymentInput);
 
             $booking = $booking->fresh()->load('showtime.movie', 'showtime.theatre', 'user');
 
@@ -291,10 +291,29 @@ class BookingService
     }
 
     /**
-     * Mock payment: sensitive card data is never persisted (no CVV, no full PAN).
+     * Persist safe payment metadata only (no CVV, no full card number for mock; no card data for Stripe).
      */
-    protected function recordMockPayment(Booking $booking, array $paymentInput): void
+    protected function recordPayment(Booking $booking, array $paymentInput): void
     {
+        if (($paymentInput['gateway'] ?? 'mock') === 'stripe') {
+            Payment::updateOrCreate(
+                ['booking_id' => $booking->id],
+                [
+                    'amount' => $booking->total_price,
+                    'payment_method' => 'stripe',
+                    'payment_gateway' => 'stripe',
+                    'card_last_four' => null,
+                    'payment_status' => 'completed',
+                    'transaction_id' => $paymentInput['transaction_id'] ?? $paymentInput['stripe_payment_intent_id'] ?? null,
+                    'stripe_checkout_session_id' => $paymentInput['stripe_session_id'] ?? null,
+                    'stripe_payment_intent_id' => $paymentInput['stripe_payment_intent_id'] ?? null,
+                    'payment_date' => now(),
+                ]
+            );
+
+            return;
+        }
+
         $cardNumber = preg_replace('/\D/', '', $paymentInput['card_number'] ?? '');
         $cardLastFour = strlen($cardNumber) >= 4 ? substr($cardNumber, -4) : null;
 
@@ -303,6 +322,7 @@ class BookingService
             [
                 'amount' => $booking->total_price,
                 'payment_method' => $paymentInput['payment_method'] ?? 'mock',
+                'payment_gateway' => 'mock',
                 'card_last_four' => $cardLastFour,
                 'payment_status' => 'completed',
                 'transaction_id' => 'MOCK-'.strtoupper(uniqid()),

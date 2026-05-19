@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\MovieController;
+use App\Http\Controllers\StripePaymentController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -57,6 +58,9 @@ Route::middleware([
     // Payment & Cancellations
     Route::get('/payment/{booking}', [BookingController::class, 'showPayment'])->name('bookings.payment');
     Route::post('/payment/{booking}/confirm', [BookingController::class, 'confirmPayment'])->name('bookings.confirm');
+    Route::post('/payment/{booking}/stripe', [StripePaymentController::class, 'createCheckoutSession'])->name('bookings.payment.stripe');
+    Route::get('/payment/{booking}/stripe/success', [StripePaymentController::class, 'success'])->name('bookings.payment.stripe.success');
+    Route::get('/payment/{booking}/stripe/cancel', [StripePaymentController::class, 'cancel'])->name('bookings.payment.stripe.cancel');
     Route::get('/cancellation/{booking}', [BookingController::class, 'showCancellation'])->name('bookings.cancel');
     Route::post('/cancellation/{booking}/confirm', [BookingController::class, 'confirmCancellation'])->name('bookings.cancel.confirm');
 });

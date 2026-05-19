@@ -6,7 +6,7 @@ A robust and secure web-based movie booking application built with Laravel 12. T
 
 ### User Management
 - **Secure Authentication:** Laravel Jetstream for registration, login, and profile management.
-- **My Bookings:** Users can view booking history, confirm mock payments, and cancel eligible bookings.
+- **My Bookings:** Users can view booking history, pay via demo mock payment or optional Stripe Checkout (test mode), and cancel eligible bookings.
 - **Interactive Seat Selection:** Livewire-powered seat grid with real-time selection (no full page reload).
 
 ### Admin Dashboard
@@ -189,6 +189,57 @@ Emails will be written to `storage/logs/laravel.log` instead of being sent.
 
 - `App\Mail\BookingConfirmedMail` — triggered from `BookingService::confirmPayment()` on first successful confirmation.
 - `App\Mail\BookingCancelledMail` — triggered from `BookingService::cancelBooking()` on first successful cancellation.
+
+---
+
+## External Payment Gateway Integration
+
+This project supports an **optional** [Stripe Checkout](https://stripe.com/docs/checkout) flow in **test mode** alongside the existing **demo (mock) payment**. Mock payment is unchanged and remains the default for local demos without Stripe keys.
+
+### How it works
+
+- Card numbers, CVV, and full payment details are collected and processed **only by Stripe** on their hosted checkout page.
+- This application **does not** store full card numbers or CVV.
+- After a successful Stripe payment, the success callback verifies the Checkout Session and calls `BookingService::confirmPayment()` — the same idempotent logic used for mock payment (pending bookings only; no double confirmation or double seat reduction).
+- Safe metadata stored on the `payments` table may include: `payment_gateway` (`stripe`), `stripe_checkout_session_id`, `stripe_payment_intent_id`, `transaction_id`, and `payment_status`.
+
+### Environment variables
+
+Add these to `.env` (use your Stripe **test** keys from the [Stripe Dashboard](https://dashboard.stripe.com/test/apikeys); do not commit real secrets):
+
+```env
+STRIPE_KEY=pk_test_...
+STRIPE_SECRET=sk_test_...
+STRIPE_WEBHOOK_SECRET=
+STRIPE_CURRENCY=lkr
+```
+
+- `STRIPE_KEY` — publishable key (used if you add client-side Stripe.js later).
+- `STRIPE_SECRET` — secret key (required for Checkout Session creation).
+- `STRIPE_WEBHOOK_SECRET` — optional; reserved for webhook verification if you extend the integration.
+- `STRIPE_CURRENCY` — defaults to `lkr` (amounts are sent in the smallest currency unit, e.g. cents).
+
+If `STRIPE_KEY` or `STRIPE_SECRET` is empty, the **Pay with Stripe** block is hidden and only **Demo Payment** is shown.
+
+### Web routes
+
+| Method | Route | Name |
+|--------|-------|------|
+| POST | `/payment/{booking}/stripe` | `bookings.payment.stripe` |
+| GET | `/payment/{booking}/stripe/success` | `bookings.payment.stripe.success` |
+| GET | `/payment/{booking}/stripe/cancel` | `bookings.payment.stripe.cancel` |
+
+### Testing Stripe (test mode)
+
+1. Set `STRIPE_KEY` and `STRIPE_SECRET` to test keys, then run `php artisan config:clear`.
+2. Log in, create a booking, and open the payment page.
+3. Click **Pay with Stripe** and complete checkout with a [Stripe test card](https://stripe.com/docs/testing), e.g. `4242 4242 4242 4242`, any future expiry, any CVC.
+4. On success you are redirected to **My Bookings** with the booking confirmed.
+5. If you cancel on Stripe’s page, you return to the payment page with an info message; the booking stays **pending**.
+
+### Demo payment still works
+
+Use **Demo Payment** with the mock card form (same as before). It calls `POST /api/bookings/{id}/confirm` and does not require Stripe.
 
 ---
 

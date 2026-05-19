@@ -9,11 +9,40 @@
                 </div>
             </div>
 
+            @if (session('success'))
+                <div class="mb-6 rounded-xl border border-green-300 bg-green-50 p-4 text-sm font-semibold text-green-800" role="status">{{ session('success') }}</div>
+            @endif
+            @if (session('error'))
+                <div class="mb-6 rounded-xl border border-red-300 bg-red-50 p-4 text-sm font-semibold text-red-700" role="alert">{{ session('error') }}</div>
+            @endif
+            @if (session('info'))
+                <div class="mb-6 rounded-xl border border-blue-300 bg-blue-50 p-4 text-sm font-semibold text-blue-800" role="status">{{ session('info') }}</div>
+            @endif
+
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <!-- Payment Form (Left) -->
-                <div class="md:col-span-2 relative z-10">
+                <div class="md:col-span-2 relative z-10 space-y-6">
+                    @if (filled(config('services.stripe.key')) && filled(config('services.stripe.secret')) && data_get($booking, 'status') === 'pending')
+                        <div class="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm pointer-events-auto">
+                            <h3 class="text-xl font-bold text-[#020617] mb-2">Pay with Stripe</h3>
+                            <p class="text-sm text-slate-500 mb-6">Secure checkout via Stripe (test mode). Card details are handled by Stripe — not stored in this app.</p>
+                            <form action="{{ route('bookings.payment.stripe', data_get($booking, 'id')) }}" method="POST" class="relative z-10 pointer-events-auto">
+                                @csrf
+                                <div class="flex items-start gap-3 mb-6">
+                                    <input type="checkbox" id="accept_terms_stripe" name="accept_terms" value="1" required class="w-4 h-4 mt-1 accent-[#020617] cursor-pointer">
+                                    <label for="accept_terms_stripe" class="text-sm text-slate-600 leading-relaxed font-medium cursor-pointer">
+                                        I agree to the <x-cancellation-policy-link /> (50% refund).
+                                    </label>
+                                </div>
+                                <button type="submit" class="w-full py-4 px-6 rounded-xl bg-[#635BFF] text-white font-bold cursor-pointer transition-all shadow-lg hover:bg-[#4f46e5]">
+                                    Pay with Stripe
+                                </button>
+                            </form>
+                        </div>
+                    @endif
                     <div class="bg-[#6482AD] rounded-2xl p-8 border border-white/10 shadow-sm text-white pointer-events-auto">
-                        <h3 class="text-xl font-bold mb-8">Payment Details</h3>
+                        <h3 class="text-xl font-bold mb-2">Demo Payment</h3>
+                        <p class="text-sm text-white/70 mb-6">Mock card form for local testing (no real charges).</p>
                         <div id="payment-error" class="hidden mb-6 rounded-xl border border-red-300 bg-red-50 p-4 text-sm font-semibold text-red-700" role="alert"></div>
                         <form action="{{ route('bookings.confirm', data_get($booking, 'id')) }}" method="POST" id="payment-form" class="relative z-10 pointer-events-auto">
                             @csrf
@@ -95,7 +124,7 @@
                                 </a>
                                 <button type="submit"
                                     class="flex-1 py-4 px-6 rounded-xl bg-[#0F4C75] text-white font-bold cursor-pointer transition-all shadow-lg hover:bg-black">
-                                    Pay
+                                    Demo Payment
                                 </button>
                             </div>
                         </form>
@@ -317,7 +346,7 @@
             } finally {
                 if (payButton) {
                     payButton.disabled = false;
-                    payButton.textContent = 'Pay';
+                    payButton.textContent = 'Demo Payment';
                 }
             }
         });
