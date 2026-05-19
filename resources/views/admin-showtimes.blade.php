@@ -34,21 +34,47 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div>
                         <label for="theatre_id" class="block text-sm font-bold text-[#020617]/70 mb-2 uppercase tracking-wide">Theatre</label>
-                        <select id="theatre_id" name="theatre_id" required class="w-full bg-white border border-gray-200 rounded-xl p-4 text-[#020617] outline-none focus:border-[#6482AD] transition-all font-medium appearance-none">
-                            <option value="">Select Theatre</option>
-                            @foreach ($theatres as $theatre)
-                                <option value="{{ $theatre->id }}">{{ $theatre->name }}</option>
-                            @endforeach
-                        </select>
+                        <div class="relative">
+                            <select id="theatre_id" name="theatre_id" required
+                                class="admin-select w-full bg-white border border-gray-200 rounded-xl p-4 pr-12 text-[#020617] outline-none focus:border-[#6482AD] transition-all font-medium cursor-pointer">
+                                <option value="" disabled {{ old('theatre_id') ? '' : 'selected' }}>Select Theatre</option>
+                                @forelse ($theatres as $theatre)
+                                    <option value="{{ $theatre->id }}" @selected(old('theatre_id') == $theatre->id)>{{ $theatre->name }} — {{ $theatre->location }}</option>
+                                @empty
+                                    <option value="" disabled>No theatres available</option>
+                                @endforelse
+                            </select>
+                            <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-[#020617]/50" aria-hidden="true">
+                                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+                                </svg>
+                            </span>
+                        </div>
+                        @if($theatres->isEmpty())
+                            <p class="mt-2 text-xs font-semibold text-amber-900">Add a theatre first from <a href="{{ route('admin.theatres.index') }}" class="underline">Theatre Management</a>.</p>
+                        @endif
                     </div>
                     <div>
                         <label for="movie_id" class="block text-sm font-bold text-[#020617]/70 mb-2 uppercase tracking-wide">Movie</label>
-                        <select id="movie_id" name="movie_id" required class="w-full bg-white border border-gray-200 rounded-xl p-4 text-[#020617] outline-none focus:border-[#6482AD] transition-all font-medium appearance-none">
-                            <option value="">Select Movie</option>
-                            @foreach ($movies as $movie)
-                                <option value="{{ $movie->id }}">{{ $movie->title }}</option>
-                            @endforeach
-                        </select>
+                        <div class="relative">
+                            <select id="movie_id" name="movie_id" required
+                                class="admin-select w-full bg-white border border-gray-200 rounded-xl p-4 pr-12 text-[#020617] outline-none focus:border-[#6482AD] transition-all font-medium cursor-pointer">
+                                <option value="" disabled {{ old('movie_id') ? '' : 'selected' }}>Select Movie</option>
+                                @forelse ($movies as $movie)
+                                    <option value="{{ $movie->id }}" @selected(old('movie_id') == $movie->id)>{{ $movie->title }}</option>
+                                @empty
+                                    <option value="" disabled>No movies available</option>
+                                @endforelse
+                            </select>
+                            <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-[#020617]/50" aria-hidden="true">
+                                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+                                </svg>
+                            </span>
+                        </div>
+                        @if($movies->isEmpty())
+                            <p class="mt-2 text-xs font-semibold text-amber-900">Add a movie first from <a href="{{ route('admin.movies.index') }}" class="underline">Movie Management</a>.</p>
+                        @endif
                     </div>
                     <div>
                         <label for="showtime" class="block text-sm font-bold text-[#020617]/70 mb-2 uppercase tracking-wide">Date & Time</label>
@@ -60,22 +86,36 @@
                     </div>
                     <div>
                         <label for="format" class="block text-sm font-bold text-[#020617]/70 mb-2 uppercase tracking-wide">Format</label>
-                        <select id="format" name="format" class="w-full bg-white border border-gray-200 rounded-xl p-4 text-[#020617] outline-none focus:border-[#6482AD] transition-all font-medium appearance-none">
-                            <option value="2D">2D</option>
-                            <option value="3D">3D</option>
-                            <option value="IMAX">IMAX</option>
-                            <option value="4DX">4DX</option>
-                        </select>
+                        <div class="relative">
+                            <select id="format" name="format" class="admin-select w-full bg-white border border-gray-200 rounded-xl p-4 pr-12 text-[#020617] outline-none focus:border-[#6482AD] transition-all font-medium cursor-pointer">
+                                <option value="2D">2D</option>
+                                <option value="3D">3D</option>
+                                <option value="IMAX">IMAX</option>
+                                <option value="4DX">4DX</option>
+                            </select>
+                            <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-[#020617]/50" aria-hidden="true">
+                                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+                                </svg>
+                            </span>
+                        </div>
                     </div>
                     <div>
                         <label for="language" class="block text-sm font-bold text-[#020617]/70 mb-2 uppercase tracking-wide">Language</label>
-                        <select id="language" name="language" class="w-full bg-white border border-gray-200 rounded-xl p-4 text-[#020617] outline-none focus:border-[#6482AD] transition-all font-medium appearance-none">
-                            <option value="English">English</option>
-                            <option value="Hindi">Hindi</option>
-                            <option value="Tamil">Tamil</option>
-                            <option value="Telugu">Telugu</option>
-                            <option value="Malayalam">Malayalam</option>
-                        </select>
+                        <div class="relative">
+                            <select id="language" name="language" class="admin-select w-full bg-white border border-gray-200 rounded-xl p-4 pr-12 text-[#020617] outline-none focus:border-[#6482AD] transition-all font-medium cursor-pointer">
+                                <option value="English">English</option>
+                                <option value="Hindi">Hindi</option>
+                                <option value="Tamil">Tamil</option>
+                                <option value="Telugu">Telugu</option>
+                                <option value="Malayalam">Malayalam</option>
+                            </select>
+                            <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-[#020617]/50" aria-hidden="true">
+                                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+                                </svg>
+                            </span>
+                        </div>
                     </div>
                 </div>
                 <div class="flex flex-col md:flex-row gap-4">
@@ -130,13 +170,15 @@
                                 </td>
                                 <td class="py-4 px-3 text-[#006989] font-extrabold">LKR {{ number_format($showtime->ticket_price, 2) }}</td>
                                 <td class="py-4 px-3">
-                                    <form action="{{ route('admin.showtimes.destroy', $showtime->id) }}" method="POST" onsubmit="return confirm('Are you sure?')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="px-4 py-1.5 bg-red-600 text-white rounded-md text-[10px] font-bold hover:bg-red-700 transition-all border-none cursor-pointer shadow-sm">
-                                            Delete
-                                        </button>
-                                    </form>
+                                    <x-admin-action-dropdown>
+                                        <form action="{{ route('admin.showtimes.destroy', $showtime->id) }}" method="POST" onsubmit="return confirm('Are you sure?')" class="block">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" role="menuitem" class="block w-full text-left px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 transition-colors border-none cursor-pointer bg-transparent">
+                                                Delete
+                                            </button>
+                                        </form>
+                                    </x-admin-action-dropdown>
                                 </td>
                             </tr>
                         @endforeach
@@ -146,4 +188,13 @@
         </div>
     </div>
 </section>
+
+<style>
+    .admin-select {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        background-color: #fff;
+    }
+</style>
 </x-movie-layout>

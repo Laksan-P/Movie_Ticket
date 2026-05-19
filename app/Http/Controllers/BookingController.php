@@ -18,9 +18,30 @@ class BookingController extends Controller
 
     public function index()
     {
-        $bookings = auth()->user()->bookings()->with('showtime.movie', 'showtime.theatre')->latest()->get();
+        $userId = auth()->id();
 
-        return view('my-bookings', compact('bookings'));
+        $activeBookings = Booking::query()
+            ->forUser($userId)
+            ->withShowtimeDetails()
+            ->active()
+            ->latest()
+            ->get();
+
+        $pastBookings = Booking::query()
+            ->forUser($userId)
+            ->withShowtimeDetails()
+            ->past()
+            ->latest()
+            ->get();
+
+        $cancelledBookings = Booking::query()
+            ->forUser($userId)
+            ->withShowtimeDetails()
+            ->cancelled()
+            ->latest()
+            ->get();
+
+        return view('my-bookings', compact('activeBookings', 'pastBookings', 'cancelledBookings'));
     }
 
     public function create(Showtime $showtime)

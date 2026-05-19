@@ -117,18 +117,18 @@
                                     @endif
                                 </td>
                                 <td class="py-4 px-3">
-                                    <div class="flex gap-2">
-                                        <button onclick='editTheatre({!! json_encode($theatre) !!})' class="px-4 py-1.5 bg-[#6482AD] text-white rounded-md text-[10px] font-bold hover:bg-[#006989] transition-all border-none cursor-pointer shadow-sm">
+                                    <x-admin-action-dropdown>
+                                        <button type="button" role="menuitem" onclick='editTheatre({!! json_encode($theatre) !!})' class="block w-full text-left px-4 py-2 text-xs font-bold text-[#020617] hover:bg-gray-100 transition-colors border-none cursor-pointer bg-transparent">
                                             Edit
                                         </button>
-                                        <form action="{{ route('admin.theatres.destroy', $theatre->id) }}" method="POST" onsubmit="return confirm('Are you sure?')">
+                                        <form action="{{ route('admin.theatres.destroy', $theatre->id) }}" method="POST" onsubmit="return confirm('Are you sure?')" class="block">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="px-4 py-1.5 bg-red-600 text-white rounded-md text-[10px] font-bold hover:bg-red-700 transition-all border-none cursor-pointer shadow-sm">
+                                            <button type="submit" role="menuitem" class="block w-full text-left px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 transition-colors border-none cursor-pointer bg-transparent">
                                                 Delete
                                             </button>
                                         </form>
-                                    </div>
+                                    </x-admin-action-dropdown>
                                 </td>
                             </tr>
                         @endforeach

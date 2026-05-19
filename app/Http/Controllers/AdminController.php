@@ -161,8 +161,8 @@ class AdminController extends Controller
     public function showtimesIndex()
     {
         $showtimes = \App\Models\Showtime::with(['movie', 'theatre'])->latest()->get();
-        $movies = Movie::all();
-        $theatres = Theatre::all();
+        $movies = Movie::orderBy('title')->get();
+        $theatres = Theatre::orderBy('name')->get();
         return view('admin-showtimes', compact('showtimes', 'movies', 'theatres'));
     }
 
