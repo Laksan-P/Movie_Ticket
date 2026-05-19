@@ -2,31 +2,32 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Showtime;
+use App\Http\Controllers\Concerns\AuthorizesBookingOwnership;
 use App\Models\Booking;
-use App\Models\Cancellation;
+use App\Models\Showtime;
+use App\Services\BookingService;
 use Illuminate\Http\Request;
 
 class BookingController extends Controller
 {
+    use AuthorizesBookingOwnership;
+
+    public function __construct(
+        protected BookingService $bookingService
+    ) {}
+
     public function index()
     {
         $bookings = auth()->user()->bookings()->with('showtime.movie', 'showtime.theatre')->latest()->get();
+
         return view('my-bookings', compact('bookings'));
     }
 
     public function create(Showtime $showtime)
     {
         $showtime->load(['movie', 'theatre']);
-        // Get booked seats
-        $bookedSeats = Booking::where('showtime_id', $showtime->id)
-            ->where('status', 'confirmed')
-            ->pluck('seats')
-            ->flatMap(function($seats) {
-                return explode(',', $seats);
-            })->toArray();
 
-        return view('booking', compact('showtime', 'bookedSeats'));
+        return view('booking', compact('showtime'));
     }
 
     public function store(Request $request)
@@ -37,71 +38,74 @@ class BookingController extends Controller
             'number_of_tickets' => 'required|numeric|min:1',
         ]);
 
-        $showtime = Showtime::findOrFail($request->showtime_id);
-        $total_price = $showtime->ticket_price * $request->number_of_tickets;
-
-        $booking = Booking::create([
-            'user_id' => auth()->id(),
-            'showtime_id' => $request->showtime_id,
-            'number_of_tickets' => $request->number_of_tickets,
-            'seats' => $request->seats,
-            'total_price' => $total_price,
-            'status' => 'pending', // Set to pending until payment
-        ]);
+        $booking = $this->bookingService->createBooking(
+            auth()->id(),
+            (int) $request->showtime_id,
+            $request->seats,
+            (int) $request->number_of_tickets
+        );
 
         return redirect()->route('bookings.payment', $booking->id);
     }
 
     public function showPayment(Booking $booking)
     {
+        $this->authorizeBookingAccess($booking);
         $booking->load(['showtime.movie', 'showtime.theatre']);
+
         return view('payment', compact('booking'));
     }
 
     public function confirmPayment(Request $request, Booking $booking)
     {
-        // Simple mock payment
-        $booking->update(['status' => 'confirmed']);
-        
-        // Decrease available seats
-        $booking->showtime->decrement('available_seats', $booking->number_of_tickets);
+        $this->authorizeBookingAccess($booking);
 
-        return redirect()->route('bookings.index')->with('success', 'Booking confirmed!');
+        $request->validate([
+            'payment_method' => 'nullable|in:debit_card,credit_card',
+            'card_number' => 'nullable|string',
+        ]);
+
+        $result = $this->bookingService->confirmPayment($booking, $request->only([
+            'payment_method',
+            'card_number',
+        ]));
+
+        if (! $result['success']) {
+            return redirect()->route('bookings.payment', $booking->id)
+                ->with('error', $result['message']);
+        }
+
+        return redirect()->route('bookings.index')->with('success', $result['message']);
     }
 
     public function showCancellation(Booking $booking)
     {
+        $this->authorizeBookingAccess($booking);
         $booking->load(['showtime.movie', 'showtime.theatre']);
+
         return view('cancellation', compact('booking'));
     }
 
     public function confirmCancellation(Request $request, Booking $booking)
     {
+        $this->authorizeBookingAccess($booking);
+
         $request->validate([
             'reason' => 'required|string',
             'comments' => 'nullable|string',
         ]);
 
-        $booking->update(['status' => 'cancelled']);
-        
-        // Create cancellation record
-        $originalAmount = $booking->total_price;
-        $refundAmount = $originalAmount * 0.5;
-        $cancellationFee = $originalAmount * 0.5;
+        $result = $this->bookingService->cancelBooking(
+            $booking,
+            $request->reason,
+            $request->comments
+        );
 
-        Cancellation::create([
-            'booking_id' => $booking->id,
-            'original_amount' => $originalAmount,
-            'refund_amount' => $refundAmount,
-            'cancellation_fee' => $cancellationFee,
-            'reason' => $request->reason . ($request->comments ? ' - ' . $request->comments : ''),
-            'status' => 'approved',
-            'cancellation_date' => now(),
-        ]);
-        
-        // Return seats
-        $booking->showtime->increment('available_seats', $booking->number_of_tickets);
+        if (! $result['success']) {
+            return redirect()->route('bookings.cancel', $booking->id)
+                ->with('error', $result['message']);
+        }
 
-        return redirect()->route('bookings.index')->with('success', 'Booking cancelled successfully.');
+        return redirect()->route('bookings.index')->with('success', $result['message']);
     }
 }

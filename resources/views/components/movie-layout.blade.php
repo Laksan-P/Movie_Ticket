@@ -9,6 +9,8 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
+    @livewireStyles
+
     <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -75,9 +77,9 @@
                     <a href="{{ route('bookings.index') }}" class="text-[#c08552] font-medium hover:text-[#f3e9dc] transition-colors no-underline">
                         My Bookings
                     </a>
-                    <form method="POST" action="{{ route('logout') }}" x-data>
+                    <form method="POST" action="{{ route('logout') }}" class="inline">
                         @csrf
-                        <button type="submit" class="bg-transparent border-none cursor-pointer px-4 py-2 rounded-full border border-gray-600 text-sm font-medium text-gray-300 hover:text-white hover:border-gray-400 transition-all no-underline">
+                        <button type="submit" class="bg-transparent border-none cursor-pointer px-4 py-2 rounded-full border border-gray-600 text-sm font-medium text-gray-300 hover:text-white hover:border-gray-400 transition-all">
                             Logout
                         </button>
                     </form>
@@ -114,7 +116,7 @@
         <a href="{{ route('theatres.index') }}" class="py-4 text-2xl font-bold no-underline {{ request()->routeIs('theatres.*') ? 'text-[#EDEDCE] relative after:content-[\'\'] after:absolute after:left-0 after:bottom-2 after:w-8 after:h-[2px] after:bg-[#EDEDCE]' : 'text-white' }}">Theatres</a>
         @auth
             <a href="{{ route('bookings.index') }}" class="py-4 text-2xl font-bold no-underline text-white">My Bookings</a>
-            <form method="POST" action="{{ route('logout') }}" x-data class="mt-auto mb-8">
+            <form method="POST" action="{{ route('logout') }}" class="w-full">
                 @csrf
                 <button type="submit" class="w-full py-4 rounded-full bg-white/10 text-white font-bold border border-white/10 hover:bg-white hover:text-[#01161e] transition-all cursor-pointer">
                     Logout
@@ -211,7 +213,10 @@
             }, 400);
         });
     }
+
 </script>
+
+@livewireScripts
 
 </body>
 </html>

@@ -164,23 +164,48 @@
         document.addEventListener('DOMContentLoaded', function () {
             const form = document.querySelector('form[action*="confirm"]');
             if (form) {
-                form.addEventListener('submit', function (e) {
+                form.addEventListener('submit', async function (e) {
                     e.preventDefault();
 
-                    const modal = document.getElementById('cancel-success-modal');
-                    const content = document.getElementById('modal-content');
+                    const bookingId = "{{ data_get($booking, 'id') }}";
+                    const formData = new FormData(this);
+                    const payload = Object.fromEntries(formData.entries());
 
-                    // Show modal with animation
-                    modal.classList.remove('hidden');
-                    setTimeout(() => {
-                        modal.classList.add('opacity-100');
-                        content.classList.add('scale-100');
-                    }, 10);
+                    try {
+                        const response = await fetch("{{ url('/api/bookings') }}/" + bookingId + "/cancel", {
+                            method: 'POST',
+                            credentials: 'include',
+                            headers: {
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(payload)
+                        });
 
-                    // Wait for 2.5 seconds then submit
-                    setTimeout(() => {
-                        this.submit();
-                    }, 2500);
+                        if (response.ok) {
+                            const modal = document.getElementById('cancel-success-modal');
+                            const content = document.getElementById('modal-content');
+
+                            // Show modal with animation
+                            modal.classList.remove('hidden');
+                            setTimeout(() => {
+                                modal.classList.add('opacity-100');
+                                content.classList.add('scale-100');
+                            }, 10);
+
+                            // Wait for 2.5 seconds then redirect
+                            setTimeout(() => {
+                                window.location.href = "{{ route('bookings.index') }}";
+                            }, 2500);
+                        } else {
+                            const errorData = await response.json();
+                            alert(errorData.message || 'Cancellation failed. Please try again.');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('An unexpected error occurred.');
+                    }
                 });
             }
         });

@@ -1,10 +1,13 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-Route::redirect('/theatre', '/theatres');
-use App\Http\Controllers\MovieController;
-use App\Http\Controllers\BookingController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\BookingController;
+use App\Http\Controllers\MovieController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
+
+Route::redirect('/theatre', '/theatres');
 
 Route::get('/', [MovieController::class, 'index'])->name('home');
 Route::get('/movies/{movie}', [MovieController::class, 'show'])->name('movies.show');
@@ -82,9 +85,10 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
     Route::delete('/showtimes/{showtime}', [AdminController::class, 'showtimeDestroy'])->name('showtimes.destroy');
 });
 
-Route::post('/logout', function () {
+Route::post('/logout', function (Request $request) {
     Auth::logout();
-    request()->session()->invalidate();
-    request()->session()->regenerateToken();
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+
     return redirect('/');
 })->name('logout');

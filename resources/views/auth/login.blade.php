@@ -230,5 +230,75 @@
                 icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>';
             }
         }
+
+        // API Integration for Login and Register
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle Login
+            const loginForm = document.querySelector('form[action*="login"]');
+            if (loginForm) {
+                loginForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    const formData = new FormData(this);
+                    const payload = Object.fromEntries(formData.entries());
+                    payload.device_name = 'web';
+
+                    try {
+                        const response = await fetch("{{ url('/api/login') }}", {
+                            method: 'POST',
+                            credentials: 'include',
+                            headers: {
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (response.ok) {
+                            window.location.href = "{{ route('home') }}";
+                        } else {
+                            const errorData = await response.json();
+                            alert(errorData.message || 'Login failed. Please check your credentials.');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('An unexpected error occurred during login.');
+                    }
+                });
+            }
+
+            // Handle Register
+            const registerForm = document.querySelector('form[action*="register"]');
+            if (registerForm) {
+                registerForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    const formData = new FormData(this);
+                    const payload = Object.fromEntries(formData.entries());
+
+                    try {
+                        const response = await fetch("{{ url('/api/register') }}", {
+                            method: 'POST',
+                            credentials: 'include',
+                            headers: {
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (response.ok) {
+                            window.location.href = "{{ route('home') }}";
+                        } else {
+                            const errorData = await response.json();
+                            alert(errorData.message || 'Registration failed. Please try again.');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('An unexpected error occurred during registration.');
+                    }
+                });
+            }
+        });
     </script>
 </x-movie-layout>

@@ -3,44 +3,66 @@
 namespace App\Livewire;
 
 use App\Models\Showtime;
-use App\Models\Booking;
+use App\Services\BookingService;
+use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 
 class SeatSelection extends Component
 {
-    public $showtime;
-    public $selectedSeats = [];
-    public $bookedSeats = [];
+    public Showtime $showtime;
 
-    public function mount(Showtime $showtime)
+    public array $selectedSeats = [];
+
+    public array $bookedSeats = [];
+
+    public function mount(Showtime $showtime): void
     {
-        $this->showtime = $showtime;
+        $this->showtime = $showtime->load(['movie', 'theatre']);
         $this->loadBookedSeats();
     }
 
-    public function loadBookedSeats()
+    public function loadBookedSeats(): void
     {
-        $bookings = Booking::where('showtime_id', $this->showtime->id)
-            ->where('status', 'confirmed')
-            ->pluck('seats')
-            ->toArray();
-
-        $allBooked = [];
-        foreach ($bookings as $seatString) {
-            $allBooked = array_merge($allBooked, explode(',', $seatString));
-        }
-        $this->bookedSeats = $allBooked;
+        $this->bookedSeats = app(BookingService::class)
+            ->getUnavailableSeats($this->showtime->id);
     }
 
-    public function toggleSeat($seat)
+    public function toggleSeat(string $seat): void
     {
-        if (in_array($seat, $this->bookedSeats)) return;
+        if (in_array($seat, $this->bookedSeats, true)) {
+            return;
+        }
 
-        if (in_array($seat, $this->selectedSeats)) {
-            $this->selectedSeats = array_diff($this->selectedSeats, [$seat]);
+        if (in_array($seat, $this->selectedSeats, true)) {
+            $this->selectedSeats = array_values(array_diff($this->selectedSeats, [$seat]));
         } else {
             $this->selectedSeats[] = $seat;
         }
+    }
+
+    public function proceedToPayment(): void
+    {
+        if ($this->selectedSeats === []) {
+            $this->addError('seats', 'Please select at least one seat.');
+
+            return;
+        }
+
+        try {
+            $booking = app(BookingService::class)->createBooking(
+                auth()->id(),
+                $this->showtime->id,
+                implode(',', $this->selectedSeats),
+                count($this->selectedSeats)
+            );
+        } catch (ValidationException $e) {
+            $message = collect($e->errors())->flatten()->first() ?? 'Booking failed.';
+            $this->addError('seats', $message);
+
+            return;
+        }
+
+        $this->redirect(route('bookings.payment', $booking->id), navigate: false);
     }
 
     public function render()

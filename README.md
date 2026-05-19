@@ -1,68 +1,100 @@
 # Movie Booking System
 
-A robust and secure web-based movie booking application built with the Laravel framework. This system provides a seamless experience for moviegoers to browse shows, select seats, and manage bookings, while providing administrators with a comprehensive dashboard to manage movies, theatres, and revenue.
+A robust and secure web-based movie booking application built with Laravel 12. This system provides a seamless experience for moviegoers to browse shows, select seats, and manage bookings, while giving administrators a dashboard to manage movies, theatres, and showtimes.
 
-## 🚀 Core Features
+## Core Features
 
 ### User Management
-- **Secure Authentication:** Built using **Laravel Jetstream**, providing a secure registration and login system.
-- **My Bookings:** Users can view their booking history, check status, and perform cancellations.
-- **Interactive Seat Selection:** Powered by **Livewire**, allowing users to select seats in real-time without refreshing the page.
+- **Secure Authentication:** Laravel Jetstream for registration, login, and profile management.
+- **My Bookings:** Users can view booking history, confirm mock payments, and cancel eligible bookings.
+- **Interactive Seat Selection:** Livewire-powered seat grid with real-time selection (no full page reload).
 
 ### Admin Dashboard
-- **Movie Management:** Full CRUD operations for movies including posters, descriptions, and active status.
-- **Theatre & Showtime Management:** Administrators can register theatres and deploy showtime sessions.
-- **Booking Oversight:** View all customer bookings, track attendance, and manage cancellations.
-- **Revenue Tracking:** Advanced revenue calculation logic that includes both confirmed ticket sales and partial revenue from cancellation fees.
+- **Movie Management:** CRUD for movies, posters, and active status.
+- **Theatre & Showtime Management:** Register theatres and deploy showtime sessions.
+- **Booking Oversight:** View customer bookings and cancellations.
+- **Revenue Tracking:** Confirmed sales plus 50% cancellation fees count toward revenue.
 
 ---
 
-## 🔐 Security Implementation & Documentation
+## Security Implementation
 
-Security is a primary focus of this application, implemented through multiple layers:
-
-### 1. Authentication & Authorization
-- **Laravel Jetstream (Web):** Used to protect all user and administrator web routes. It handles secure session management, password hashing (Bcrypt), and protection against brute-force attacks.
-- **Laravel Sanctum (API):** Provides secure, token-based authentication for the API extension. This ensures that only authorized clients can access sensitive data via mobile or third-party integrations.
-
-### 2. Protection Layers
-- **Middleware Security:** 
-    - The `auth` middleware protects private user routes.
-    - Specific route grouping ensures that only authenticated users can access booking and payment functions.
-- **CSRF Protection:** Every state-changing request (POST/PUT/DELETE) is protected by CSRF tokens to prevent Cross-Site Request Forgery.
-- **Validation:** Strict input validation is implemented in every controller using `$request->validate()`. This prevents malformed data, script injection, and ensures data integrity before it reaches the database.
-
-### 3. Data Safety
-- **Eloquent ORM:** All database interactions use Laravel’s Eloquent ORM, which automatically utilizes PDO parameter binding to protect the application against SQL Injection attacks.
+- **Laravel Jetstream authentication:** Web users register and log in through Jetstream/Fortify with session-based access to protected routes.
+- **Password hashing:** Passwords are hashed with Bcrypt before storage (never stored in plain text).
+- **CSRF protection:** All state-changing web forms include CSRF tokens; the API layer uses Sanctum stateful domains where applicable.
+- **Sanctum token-based API authentication:** Mobile or API clients authenticate with `Authorization: Bearer {token}` after login or register.
+- **Role-based admin middleware:** The `admin` middleware restricts `/admin/*` routes to users with the `admin` role.
+- **Input validation:** Controllers validate requests with Laravel validation rules before database writes.
+- **Eloquent ORM / SQL injection protection:** Queries use Eloquent and parameter binding instead of raw user input.
+- **Booking ownership checks:** Payment, cancellation, and related API actions verify the booking belongs to the authenticated user (admins may access all).
+- **No CVV storage / secure mock payment handling:** CVV is collected only for demo UI validation; payments store method, card last four digits, transaction id, and status only.
+- **Route protection:** Customer booking routes use `auth:sanctum`, Jetstream session, and `verified` middleware.
 
 ---
 
-## 🌐 API Extension & Integration
+## API Endpoints
 
-The system includes a dedicated RESTful API layer to support future mobile app integration or external services.
+Base URL: `/api`
 
-### API Endpoints
-- **Authentication:** `POST /api/login` - Authenticates a user and returns a Sanctum bearer token.
-- **Movie Registry:** `GET /api/movies` - Retrieves a list of all currently active movies.
-- **User Profile:** `GET /api/user` - Returns details of the authenticated user (Requires Sanctum Token).
-- **Booking Integration:** 
-    - `GET /api/bookings` - Lists all bookings for the authenticated user.
-    - `POST /api/bookings` - Allows booking creation via API.
+| Method | Endpoint | Auth (Bearer token) | Description |
+|--------|----------|-------------------|-------------|
+| POST | `/register` | No | Register a user; returns Sanctum token and user JSON (201). |
+| POST | `/login` | No | Login; returns Sanctum token and user JSON (200). Optional `device_name` (defaults to `api-token`). |
+| POST | `/logout` | Yes | Revoke current token and end session (200). |
+| GET | `/movies` | No | List active movies (200). |
+| GET | `/movies/{id}` | No | View a single movie with showtimes (200/404). |
+| GET | `/user` | Yes | Authenticated user profile (200). |
+| GET | `/bookings` | Yes | List authenticated user's bookings (200). |
+| POST | `/bookings` | Yes | Create booking with `showtime_id`, `seats`, `number_of_tickets` (201/422). |
+| POST | `/bookings/{booking}/confirm` | Yes | Confirm mock payment (200/403/422). |
+| POST | `/bookings/{booking}/cancel` | Yes | Cancel booking with `reason`, optional `comments` (200/403/422). |
+
+**Authentication header (protected routes):**
+
+```
+Authorization: Bearer {your-sanctum-token}
+Accept: application/json
+```
+
+**Example register response:**
+
+```json
+{
+  "message": "User registered successfully",
+  "token": "1|...",
+  "user": { "id": 1, "name": "...", "email": "..." }
+}
+```
+
+**Error responses:** `401` unauthenticated, `403` forbidden, `404` not found, `422` validation errors (with `errors` object).
 
 ---
 
-## 📊 Business Logic: Revenue Calculation
+## Demo Testing Flow
 
-The application uses a specific business logic to calculate total revenue, ensuring financial accuracy even when plans change:
-- **Confirmed Bookings:** 100% of the ticket price is added to revenue once the status is "Confirmed".
-- **Cancellations:** In an emergency or change of plans, users can cancel their tickets for a 50% refund. The remaining **50% (Cancellation Fee)** is retained by the system and counted as revenue.
+1. **Register** a new user at `/register` (web) or `POST /api/register`.
+2. **Login** at `/login` or `POST /api/login` and note the API token if testing the API.
+3. **Browse movies** on the home page or via `GET /api/movies`.
+4. **Select a showtime** from a theatre and open the seat selection page.
+5. **Select seats** using the Livewire seat grid and proceed to payment.
+6. **Create booking** (pending status) and complete **mock payment** on the payment page.
+7. **View My Bookings** at `/my-bookings`.
+8. **Cancel a booking** from My Bookings (50% refund policy); confirm cancellation cannot be repeated.
+9. **Admin login** (user with `role = admin`) and manage movies, theatres, and showtimes at `/admin/dashboard`.
 
 ---
 
-## 🛠️ Technology Stack
+## Business Logic: Revenue Calculation
+
+- **Confirmed bookings:** 100% of ticket price counts as revenue.
+- **Cancellations:** Users receive a 50% refund; the remaining 50% cancellation fee is retained as revenue.
+
+---
+
+## Technology Stack
 
 - **Framework:** Laravel 12.x
-- **Frontend Interaction:** Livewire (v3.x) for dynamic UI components.
-- **Database Engine:** Eloquent ORM (MySQL / SQLite).
-- **Security Suite:** Laravel Jetstream & Laravel Sanctum.
-- **Styling:** CSS3 & Tailwind CSS for a premium, responsive design.
+- **Frontend interaction:** Livewire 3.x (seat selection)
+- **Database:** Eloquent ORM (MySQL / SQLite)
+- **Security:** Laravel Jetstream & Laravel Sanctum
+- **Styling:** Tailwind CSS

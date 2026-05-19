@@ -15,7 +15,7 @@ class AuthController extends Controller
         $request->validate([
             'email' => 'required|email',
             'password' => 'required',
-            'device_name' => 'required',
+            'device_name' => 'nullable|string|max:255',
         ]);
 
         $user = User::where('email', $request->email)->first();
@@ -26,15 +26,56 @@ class AuthController extends Controller
             ]);
         }
 
+        auth()->guard('web')->login($user, $request->boolean('remember'));
+
+        $tokenName = $request->input('device_name', 'api-token');
+
         return response()->json([
-            'token' => $user->createToken($request->device_name)->plainTextToken,
-            'user' => $user
+            'token' => $user->createToken($tokenName)->plainTextToken,
+            'user' => $user,
         ]);
+    }
+
+    public function register(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'password' => 'required|string|min:8|confirmed',
+            'device_name' => 'nullable|string|max:255',
+        ]);
+
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+        ]);
+
+        auth()->guard('web')->login($user);
+
+        $tokenName = $request->input('device_name', 'api-token');
+
+        return response()->json([
+            'message' => 'User registered successfully',
+            'token' => $user->createToken($tokenName)->plainTextToken,
+            'user' => $user,
+        ], 201);
     }
 
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
-        return response()->json(['message' => 'Logged out']);
+        if ($request->user() && $request->user()->currentAccessToken()) {
+            $request->user()->currentAccessToken()->delete();
+        }
+
+        auth()->guard('web')->logout();
+        if ($request->hasSession()) {
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
+
+        return response()->json([
+            'message' => 'Logged out successfully',
+        ]);
     }
 }

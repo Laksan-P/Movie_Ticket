@@ -73,10 +73,8 @@
 
                             <!-- Security Info -->
                             <div class="bg-[#020617]/10 border border-[#020617]/20 rounded-xl p-4 mb-8">
-                                <p class="text-[11px] font-bold text-[#020617] mb-1 tracking-wide">🔒 SECURE ENCRYPTION
-                                </p>
-                                <p class="text-[10px] text-[#020617]/50 leading-relaxed">Your payment information is
-                                    encrypted and secure.</p>
+                                <p class="text-[11px] font-bold text-[#020617] mb-1 tracking-wide">🔒 MOCK PAYMENT</p>
+                                <p class="text-[10px] text-[#020617]/50 leading-relaxed">Demo only: CVV is never stored. Only the card last four digits and payment metadata are saved.</p>
                             </div>
 
                             <!-- Terms & Conditions -->
@@ -158,7 +156,7 @@
 
     <!-- Payment Success Modal -->
     <div id="payment-success-modal"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-[#020617]/80 backdrop-blur-md hidden opacity-0 transition-opacity duration-500">
+        class="fixed inset-0 z-50 flex items-center justify-center bg-[#020617]/80 backdrop-blur-md opacity-0 transition-opacity duration-500">
         <div class="bg-white rounded-[2rem] p-12 flex flex-col items-center max-w-sm w-full mx-4 shadow-[0_20px_50px_rgba(0,0,0,0.3)] transform scale-90 transition-transform duration-500"
             id="modal-content">
             <div class="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mb-8 relative">
@@ -219,23 +217,55 @@
         });
 
         // Payment Success Modal Handling
-        document.getElementById('payment-form').addEventListener('submit', function (e) {
+        document.getElementById('payment-form').addEventListener('submit', async function (e) {
             e.preventDefault();
 
-            const modal = document.getElementById('payment-success-modal');
-            const content = document.getElementById('modal-content');
+            const bookingId = "{{ data_get($booking, 'id') }}";
+            
+            const form = this;
+            const paymentMethod = form.querySelector('input[name="payment_method"]:checked')?.value;
+            const cardNumber = form.querySelector('#card_number')?.value ?? '';
 
-            // Show modal with animation
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                modal.classList.add('opacity-100');
-                content.classList.add('scale-100');
-            }, 10);
+            try {
+                const response = await fetch("{{ url('/api/bookings') }}/" + bookingId + "/confirm", {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        payment_method: paymentMethod,
+                        card_number: cardNumber
+                    })
+                });
 
-            // Wait for 2.5 seconds then submit
-            setTimeout(() => {
-                this.submit();
-            }, 2500);
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    const modal = document.getElementById('payment-success-modal');
+                    const content = document.getElementById('modal-content');
+
+                    // Show modal with animation
+                    modal.classList.remove('hidden');
+                    setTimeout(() => {
+                        modal.classList.add('opacity-100');
+                        content.classList.add('scale-100');
+                    }, 10);
+
+                    // Wait for 2.5 seconds then redirect to bookings index
+                    setTimeout(() => {
+                        window.location.href = "{{ route('bookings.index') }}";
+                    }, 2500);
+                } else {
+                    const errorData = await response.json();
+                    alert(errorData.message || 'Payment processing failed. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An unexpected error occurred.');
+            }
         });
     </script>
 </x-movie-layout>
