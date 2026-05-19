@@ -91,6 +91,48 @@ Accept: application/json
 
 ---
 
+## Email Notifications (SMTP)
+
+The application sends transactional emails when a booking is **confirmed** (after successful mock payment) and when a booking is **cancelled** (with refund details). Emails are sent once per successful action; repeated confirm/cancel requests do not trigger duplicate messages.
+
+### Configure `.env`
+
+Use your SMTP provider credentials. **Do not commit real passwords** to version control.
+
+```env
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.example.com
+MAIL_PORT=587
+MAIL_USERNAME=your_username
+MAIL_PASSWORD=your_password
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=no-reply@moviebuff.test
+MAIL_FROM_NAME="MovieBuff"
+```
+
+For local development without SMTP, you can use:
+
+```env
+MAIL_MAILER=log
+```
+
+Emails will be written to `storage/logs/laravel.log` instead of being sent.
+
+### Testing emails
+
+1. Set `MAIL_MAILER=log` or valid SMTP settings in `.env`.
+2. Run `php artisan config:clear` after changing mail settings.
+3. Complete a **mock payment** on a pending booking — check inbox or `storage/logs/laravel.log`.
+4. **Cancel** a confirmed booking — verify the cancellation/refund email.
+5. Retry confirm/cancel on the same booking — no duplicate emails should be sent.
+
+### Mailable classes
+
+- `App\Mail\BookingConfirmedMail` — triggered from `BookingService::confirmPayment()` on first successful confirmation.
+- `App\Mail\BookingCancelledMail` — triggered from `BookingService::cancelBooking()` on first successful cancellation.
+
+---
+
 ## Technology Stack
 
 - **Framework:** Laravel 12.x

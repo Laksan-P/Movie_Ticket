@@ -1,7 +1,13 @@
 <x-movie-layout>
-    <section class="min-h-screen py-6 md:py-12 px-4 bg-[#F6F6F6]">
-        <div class="w-full mx-auto max-w-4xl">
+    <section class="min-h-screen py-6 md:py-12 pb-28 px-4 bg-[#F6F6F6]">
+        <div class="w-full mx-auto max-w-4xl relative z-10">
             <!-- Header -->
+            @if(session('error'))
+                <div class="mb-6 rounded-xl border border-red-300 bg-red-50 p-4 text-sm font-semibold text-red-700">
+                    {{ session('error') }}
+                </div>
+            @endif
+
             <div class="mb-8 px-2 md:px-0">
                 <a href="{{ route('bookings.index') }}"
                     class="text-[#020617] hover:text-[#0F4C75] transition-colors mb-4 inline-flex items-center gap-2 no-underline font-semibold">
@@ -13,9 +19,9 @@
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <!-- Cancellation Form (Left) -->
-                <div class="md:col-span-2">
+                <div class="md:col-span-2 relative z-10">
                     <div
-                        class="bg-[#6482AD] rounded-2xl p-6 md:p-8 border border-white/10 shadow-sm text-white overflow-hidden">
+                        class="bg-[#6482AD] rounded-2xl p-6 md:p-8 border border-white/10 shadow-sm text-white overflow-hidden pointer-events-auto">
                         <!-- Movie Details -->
                         <div class="mb-8 pb-8 border-b border-white/10">
                             <h2 class="text-2xl md:text-4xl font-bold mb-4">
@@ -50,9 +56,11 @@
                             </ul>
                         </div>
 
+                        <div id="cancel-error" class="hidden mb-6 rounded-xl border border-red-300 bg-red-50 p-4 text-sm font-semibold text-red-700" role="alert"></div>
+
                         <!-- Cancellation Form -->
                         <form action="{{ route('bookings.cancel.confirm', data_get($booking, 'id')) }}" method="POST"
-                            class="space-y-6">
+                            id="cancellation-form" class="space-y-6 relative z-10 pointer-events-auto">
                             @csrf
                             <div>
                                 <label for="reason" class="block text-sm font-bold text-white mb-3">Reason for
@@ -80,7 +88,7 @@
                                 <input type="checkbox" id="accept_terms" name="accept_terms" required
                                     class="w-5 h-5 mt-0.5 accent-[#020617] cursor-pointer flex-shrink-0">
                                 <div class="text-sm text-[#020617] font-bold leading-relaxed">
-                                    I agree to the <a href="{{ route('cancellation.policy') }}" target="_blank" onclick="event.stopPropagation();" class="inline-block relative z-10 text-[#020617] underline hover:text-blue-900 transition-colors pointer-events-auto">cancellation policy</a> (50% refund).
+                                    I agree to the <x-cancellation-policy-link class="inline-block relative z-10" /> (50% refund).
                                 </div>
                             </div>
 
@@ -136,9 +144,10 @@
             </div>
         </div>
     </section>
-    <!-- Cancellation Success Modal -->
+    <!-- Cancellation Success Modal (hidden + pointer-events-none so it does not block the form) -->
     <div id="cancel-success-modal"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-[#020617]/80 backdrop-blur-md hidden opacity-0 transition-opacity duration-500">
+        class="hidden pointer-events-none fixed inset-0 z-[200] min-h-screen items-center justify-center px-4 py-8 bg-[#020617]/80 backdrop-blur-md opacity-0 transition-opacity duration-500"
+        aria-hidden="true">
         <div class="bg-white rounded-[2rem] p-12 flex flex-col items-center max-w-sm w-full mx-4 shadow-[0_20px_50px_rgba(0,0,0,0.3)] transform scale-90 transition-transform duration-500"
             id="modal-content">
             <div class="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mb-8 relative">
@@ -160,54 +169,104 @@
     </div>
 
     <script>
-        // Use a more specific selector and ensure it's loaded
         document.addEventListener('DOMContentLoaded', function () {
-            const form = document.querySelector('form[action*="confirm"]');
-            if (form) {
-                form.addEventListener('submit', async function (e) {
-                    e.preventDefault();
+            const form = document.getElementById('cancellation-form');
+            const cancelError = document.getElementById('cancel-error');
+            const submitBtn = form?.querySelector('button[type="submit"]');
 
-                    const bookingId = "{{ data_get($booking, 'id') }}";
-                    const formData = new FormData(this);
-                    const payload = Object.fromEntries(formData.entries());
+            function showCancelError(message) {
+                if (!cancelError) {
+                    alert(message);
+                    return;
+                }
+                cancelError.textContent = message;
+                cancelError.classList.remove('hidden');
+            }
 
-                    try {
-                        const response = await fetch("{{ url('/api/bookings') }}/" + bookingId + "/cancel", {
-                            method: 'POST',
-                            credentials: 'include',
-                            headers: {
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                'Accept': 'application/json',
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify(payload)
-                        });
+            function clearCancelError() {
+                cancelError?.classList.add('hidden');
+            }
 
-                        if (response.ok) {
-                            const modal = document.getElementById('cancel-success-modal');
-                            const content = document.getElementById('modal-content');
+            function showCancelSuccessModal() {
+                const modal = document.getElementById('cancel-success-modal');
+                const content = document.getElementById('modal-content');
+                if (!modal) return;
 
-                            // Show modal with animation
-                            modal.classList.remove('hidden');
-                            setTimeout(() => {
-                                modal.classList.add('opacity-100');
-                                content.classList.add('scale-100');
-                            }, 10);
-
-                            // Wait for 2.5 seconds then redirect
-                            setTimeout(() => {
-                                window.location.href = "{{ route('bookings.index') }}";
-                            }, 2500);
-                        } else {
-                            const errorData = await response.json();
-                            alert(errorData.message || 'Cancellation failed. Please try again.');
-                        }
-                    } catch (error) {
-                        console.error('Error:', error);
-                        alert('An unexpected error occurred.');
-                    }
+                window.scrollTo(0, 0);
+                modal.classList.remove('hidden', 'pointer-events-none');
+                modal.classList.add('pointer-events-auto', 'flex');
+                modal.setAttribute('aria-hidden', 'false');
+                document.body.style.overflow = 'hidden';
+                requestAnimationFrame(() => {
+                    modal.classList.add('opacity-100');
+                    content?.classList.remove('scale-90');
+                    content?.classList.add('scale-100');
                 });
             }
+
+            form?.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                clearCancelError();
+
+                if (!form.reportValidity()) {
+                    return;
+                }
+
+                const bookingId = "{{ data_get($booking, 'id') }}";
+                const payload = {
+                    reason: form.querySelector('#reason')?.value ?? '',
+                    comments: form.querySelector('#comments')?.value ?? '',
+                };
+
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'Processing...';
+                }
+
+                try {
+                    const response = await fetch("{{ url('/api/bookings') }}/" + bookingId + "/cancel", {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: JSON.stringify(payload),
+                    });
+
+                    let data = {};
+                    try {
+                        data = await response.json();
+                    } catch (parseError) {
+                        data = {};
+                    }
+
+                    if (response.ok) {
+                        showCancelSuccessModal();
+                        setTimeout(() => {
+                            window.location.href = "{{ route('bookings.index') }}";
+                        }, 2500);
+                        return;
+                    }
+
+                    const message = data.message
+                        || (data.errors ? Object.values(data.errors).flat().join(' ') : null)
+                        || 'Cancellation failed. Please try again.';
+                    showCancelError(message);
+                } catch (error) {
+                    console.error('Cancellation error:', error);
+                    showCancelError('An unexpected error occurred. Please try again.');
+                } finally {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Confirm Cancellation';
+                    }
+                }
+            });
         });
     </script>
+
+    <x-cancellation-policy-modal />
 </x-movie-layout>

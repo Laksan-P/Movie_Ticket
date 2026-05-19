@@ -1,6 +1,6 @@
 <x-movie-layout>
-    <section class="min-h-screen py-12 px-4 bg-[#F6F6F6]">
-        <div class="w-full mx-auto max-w-4xl px-4">
+    <section class="min-h-screen py-12 pb-28 px-4 bg-[#F6F6F6]">
+        <div class="w-full mx-auto max-w-4xl px-4 relative z-10">
             <!-- Header -->
             <div class="mb-8 items-end flex justify-between">
                 <div>
@@ -11,10 +11,11 @@
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <!-- Payment Form (Left) -->
-                <div class="md:col-span-2">
-                    <div class="bg-[#6482AD] rounded-2xl p-8 border border-white/10 shadow-sm text-white">
+                <div class="md:col-span-2 relative z-10">
+                    <div class="bg-[#6482AD] rounded-2xl p-8 border border-white/10 shadow-sm text-white pointer-events-auto">
                         <h3 class="text-xl font-bold mb-8">Payment Details</h3>
-                        <form action="{{ route('bookings.confirm', data_get($booking, 'id')) }}" method="POST" id="payment-form">
+                        <div id="payment-error" class="hidden mb-6 rounded-xl border border-red-300 bg-red-50 p-4 text-sm font-semibold text-red-700" role="alert"></div>
+                        <form action="{{ route('bookings.confirm', data_get($booking, 'id')) }}" method="POST" id="payment-form" class="relative z-10 pointer-events-auto">
                             @csrf
 
                             <!-- Payment Method -->
@@ -82,7 +83,7 @@
                                 <input type="checkbox" id="accept_terms" name="accept_terms" required
                                     class="w-4 h-4 mt-1 accent-[#020617] cursor-pointer">
                                 <div class="text-sm text-[#020617]/70 leading-relaxed font-medium">
-                                    I agree to the <a href="{{ route('cancellation.policy') }}" target="_blank" onclick="event.stopPropagation()" class="text-[#020617] font-bold underline hover:text-blue-900 transition-colors pointer-events-auto">cancellation policy</a> (50% refund).
+                                    I agree to the <x-cancellation-policy-link /> (50% refund).
                                 </div>
                             </div>
 
@@ -154,9 +155,10 @@
         </div>
     </section>
 
-    <!-- Payment Success Modal -->
+    <!-- Payment Success Modal (hidden + pointer-events-none so it does not block the form) -->
     <div id="payment-success-modal"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-[#020617]/80 backdrop-blur-md opacity-0 transition-opacity duration-500">
+        class="hidden pointer-events-none fixed inset-0 z-[200] min-h-screen items-center justify-center px-4 py-8 bg-[#020617]/80 backdrop-blur-md opacity-0 transition-opacity duration-500"
+        aria-hidden="true">
         <div class="bg-white rounded-[2rem] p-12 flex flex-col items-center max-w-sm w-full mx-4 shadow-[0_20px_50px_rgba(0,0,0,0.3)] transform scale-90 transition-transform duration-500"
             id="modal-content">
             <div class="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mb-8 relative">
@@ -167,9 +169,13 @@
                 </svg>
             </div>
             <h2 class="text-3xl font-black text-[#020617] mb-3 text-center">Payment Done!</h2>
-            <p class="text-slate-500 text-center font-medium leading-relaxed">Your movie tickets are confirmed. Enjoy
-                the show!</p>
-            <div class="mt-8 flex gap-2">
+            <p class="text-slate-500 text-center font-medium leading-relaxed">Your movie tickets are confirmed. Enjoy the show!</p>
+            <a href="{{ route('bookings.index') }}"
+                class="mt-8 w-full py-3 px-6 rounded-xl bg-[#0F4C75] text-white font-bold text-center no-underline transition-all hover:bg-black">
+                Go to My Bookings
+            </a>
+            <p class="mt-3 text-xs text-slate-400 text-center">Redirecting automatically…</p>
+            <div class="mt-6 flex gap-2" aria-hidden="true">
                 <div class="w-2 h-2 bg-green-600 rounded-full animate-bounce"></div>
                 <div class="w-2 h-2 bg-green-600 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
                 <div class="w-2 h-2 bg-green-600 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
@@ -178,8 +184,44 @@
     </div>
 
     <script>
+        document.addEventListener('DOMContentLoaded', function () {
+        const paymentForm = document.getElementById('payment-form');
+        const paymentError = document.getElementById('payment-error');
+        const payButton = paymentForm?.querySelector('button[type="submit"]');
+
+        function showPaymentError(message) {
+            if (!paymentError) {
+                alert(message);
+                return;
+            }
+            paymentError.textContent = message;
+            paymentError.classList.remove('hidden');
+        }
+
+        function clearPaymentError() {
+            paymentError?.classList.add('hidden');
+        }
+
+        function showSuccessModal() {
+            const modal = document.getElementById('payment-success-modal');
+            const content = document.getElementById('modal-content');
+            if (!modal) return;
+
+            window.scrollTo(0, 0);
+
+            modal.classList.remove('hidden', 'pointer-events-none');
+            modal.classList.add('pointer-events-auto', 'flex');
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+            requestAnimationFrame(() => {
+                modal.classList.add('opacity-100');
+                content?.classList.remove('scale-90');
+                content?.classList.add('scale-100');
+            });
+        }
+
         // Card Number Formatting (4-digit blocks)
-        document.getElementById('card_number').addEventListener('input', function (e) {
+        document.getElementById('card_number')?.addEventListener('input', function (e) {
             let input = e.target.value.replace(/\D/g, '');
             let formatted = '';
             for (let i = 0; i < input.length; i++) {
@@ -190,7 +232,7 @@
         });
 
         // Expiry Date Formatting (MM/YY) with Month Validation
-        document.getElementById('card_expiry').addEventListener('input', function (e) {
+        document.getElementById('card_expiry')?.addEventListener('input', function (e) {
             let input = e.target.value.replace(/\D/g, '');
 
             // Auto-correct month if first digit is > 1
@@ -212,19 +254,26 @@
         });
 
         // CVV - Numbers only
-        document.getElementById('cvv').addEventListener('input', function (e) {
+        document.getElementById('cvv')?.addEventListener('input', function (e) {
             e.target.value = e.target.value.replace(/\D/g, '');
         });
 
-        // Payment Success Modal Handling
-        document.getElementById('payment-form').addEventListener('submit', async function (e) {
+        paymentForm?.addEventListener('submit', async function (e) {
             e.preventDefault();
+            clearPaymentError();
+
+            if (!paymentForm.reportValidity()) {
+                return;
+            }
 
             const bookingId = "{{ data_get($booking, 'id') }}";
-            
-            const form = this;
-            const paymentMethod = form.querySelector('input[name="payment_method"]:checked')?.value;
-            const cardNumber = form.querySelector('#card_number')?.value ?? '';
+            const paymentMethod = paymentForm.querySelector('input[name="payment_method"]:checked')?.value;
+            const cardNumber = paymentForm.querySelector('#card_number')?.value ?? '';
+
+            if (payButton) {
+                payButton.disabled = true;
+                payButton.textContent = 'Processing...';
+            }
 
             try {
                 const response = await fetch("{{ url('/api/bookings') }}/" + bookingId + "/confirm", {
@@ -233,39 +282,47 @@
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}',
                         'Accept': 'application/json',
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
                     },
                     body: JSON.stringify({
                         payment_method: paymentMethod,
-                        card_number: cardNumber
-                    })
+                        card_number: cardNumber,
+                    }),
                 });
 
+                let data = {};
+                try {
+                    data = await response.json();
+                } catch (parseError) {
+                    data = {};
+                }
+
                 if (response.ok) {
-                    const data = await response.json();
-                    
-                    const modal = document.getElementById('payment-success-modal');
-                    const content = document.getElementById('modal-content');
-
-                    // Show modal with animation
-                    modal.classList.remove('hidden');
-                    setTimeout(() => {
-                        modal.classList.add('opacity-100');
-                        content.classList.add('scale-100');
-                    }, 10);
-
-                    // Wait for 2.5 seconds then redirect to bookings index
+                    showSuccessModal();
                     setTimeout(() => {
                         window.location.href = "{{ route('bookings.index') }}";
                     }, 2500);
-                } else {
-                    const errorData = await response.json();
-                    alert(errorData.message || 'Payment processing failed. Please try again.');
+                    return;
                 }
+
+                const message = data.message
+                    || (data.errors ? Object.values(data.errors).flat().join(' ') : null)
+                    || 'Payment processing failed. Please try again.';
+
+                showPaymentError(message);
             } catch (error) {
-                console.error('Error:', error);
-                alert('An unexpected error occurred.');
+                console.error('Payment error:', error);
+                showPaymentError('An unexpected error occurred. Please try again.');
+            } finally {
+                if (payButton) {
+                    payButton.disabled = false;
+                    payButton.textContent = 'Pay';
+                }
             }
         });
+        });
     </script>
+
+    <x-cancellation-policy-modal />
 </x-movie-layout>

@@ -104,6 +104,10 @@ class BookingController extends Controller
         $this->authorizeBookingAccess($booking);
         $booking->load(['showtime.movie', 'showtime.theatre']);
 
+        if ($blockReason = $this->bookingService->cancellationBlockReason($booking)) {
+            return redirect()->route('bookings.index')->with('error', $blockReason);
+        }
+
         return view('cancellation', compact('booking'));
     }
 

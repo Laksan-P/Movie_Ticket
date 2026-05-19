@@ -3,10 +3,10 @@
         <div class="w-full mx-auto max-w-3xl">
             <!-- Header -->
             <div class="mb-12 text-center">
-                <a href="{{ url()->previous() }}"
-                    class="text-[#6482AD] hover:text-[#0F4C75] transition-colors mb-6 inline-flex items-center gap-2 no-underline font-bold">
+                <button type="button" id="cancellation-policy-back"
+                    class="text-[#6482AD] hover:text-[#0F4C75] transition-colors mb-6 inline-flex items-center gap-2 font-bold bg-transparent border-none cursor-pointer p-0">
                     ← Back to Previous Page
-                </a>
+                </button>
                 <h1 class="text-4xl md:text-5xl font-black text-[#020617] mb-4">Cancellation Policy</h1>
                 <p class="text-slate-500 text-lg">Everything you need to know about refunds and cancellations</p>
             </div>
@@ -96,4 +96,14 @@
             </div>
         </div>
     </section>
+
+    <script>
+        document.getElementById('cancellation-policy-back')?.addEventListener('click', function () {
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.location.href = "{{ route('home') }}";
+            }
+        });
+    </script>
 </x-movie-layout>

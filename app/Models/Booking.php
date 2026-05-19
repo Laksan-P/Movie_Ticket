@@ -32,6 +32,11 @@ class Booking extends Model
         return $this->hasOne(Payment::class);
     }
 
+    public function cancellation()
+    {
+        return $this->hasOne(Cancellation::class);
+    }
+
     public function scopeForUser(Builder $query, int $userId): Builder
     {
         return $query->where('user_id', $userId);

@@ -2,11 +2,16 @@
 
 namespace App\Services;
 
+use App\Mail\BookingCancelledMail;
+use App\Mail\BookingConfirmedMail;
 use App\Models\Booking;
 use App\Models\Cancellation;
 use App\Models\Payment;
 use App\Models\Showtime;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
 class BookingService
@@ -125,17 +130,58 @@ class BookingService
 
             $this->recordMockPayment($booking, $paymentInput);
 
+            $booking = $booking->fresh()->load('showtime.movie', 'showtime.theatre', 'user');
+
+            $this->sendBookingConfirmedEmail($booking);
+
             return [
                 'success' => true,
                 'message' => 'Payment confirmed and booking finalized',
-                'booking' => $booking->fresh()->load('showtime.movie', 'showtime.theatre'),
+                'booking' => $booking,
                 'status' => 200,
             ];
         });
     }
 
+    public function cancellationBlockReason(Booking $booking): ?string
+    {
+        $booking->loadMissing('showtime');
+
+        if ($booking->status === 'cancelled') {
+            return 'Booking already cancelled.';
+        }
+
+        if (! in_array($booking->status, ['pending', 'confirmed'], true)) {
+            return 'This booking cannot be cancelled.';
+        }
+
+        if (! $booking->showtime?->showtime) {
+            return null;
+        }
+
+        $showtimeAt = Carbon::parse($booking->showtime->showtime);
+
+        if ($showtimeAt->isPast()) {
+            return 'This booking cannot be cancelled because the showtime has already passed.';
+        }
+
+        if (now()->gte($showtimeAt->copy()->subMinutes(30))) {
+            return 'Cancellations are not allowed within 30 minutes of showtime.';
+        }
+
+        return null;
+    }
+
     public function cancelBooking(Booking $booking, string $reason, ?string $comments = null): array
     {
+        if ($blockReason = $this->cancellationBlockReason($booking)) {
+            return [
+                'success' => false,
+                'message' => $blockReason,
+                'status' => str_contains($blockReason, 'already cancelled') ? 200 : 422,
+            ];
+        }
+
         if ($booking->status === 'cancelled') {
             return [
                 'success' => false,
@@ -178,7 +224,7 @@ class BookingService
 
             $booking->update(['status' => 'cancelled']);
 
-            Cancellation::create([
+            $cancellation = Cancellation::create([
                 'booking_id' => $booking->id,
                 'original_amount' => $originalAmount,
                 'refund_amount' => $refundAmount,
@@ -195,6 +241,10 @@ class BookingService
                 ]);
             }
 
+            $booking = $booking->fresh()->load('showtime.movie', 'showtime.theatre', 'user');
+
+            $this->sendBookingCancelledEmail($booking, $cancellation);
+
             return [
                 'success' => true,
                 'message' => 'Booking cancelled successfully',
@@ -202,6 +252,42 @@ class BookingService
                 'status' => 200,
             ];
         });
+    }
+
+    protected function sendBookingConfirmedEmail(Booking $booking): void
+    {
+        $email = $booking->user?->email;
+        if (! $email) {
+            return;
+        }
+
+        try {
+            Mail::to($email)->send(new BookingConfirmedMail($booking));
+        } catch (\Throwable $e) {
+            Log::error('Failed to send booking confirmation email.', [
+                'booking_id' => $booking->id,
+                'email' => $email,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    protected function sendBookingCancelledEmail(Booking $booking, Cancellation $cancellation): void
+    {
+        $email = $booking->user?->email;
+        if (! $email) {
+            return;
+        }
+
+        try {
+            Mail::to($email)->send(new BookingCancelledMail($booking, $cancellation));
+        } catch (\Throwable $e) {
+            Log::error('Failed to send booking cancellation email.', [
+                'booking_id' => $booking->id,
+                'email' => $email,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
