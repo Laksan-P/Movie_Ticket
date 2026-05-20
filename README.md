@@ -42,6 +42,14 @@ The payment module includes a demo payment flow and an optional Stripe Checkout 
 
 ---
 
+## Admin Accounts Credits
+Add a section for demo credentials but use placeholders:
+Admin:
+Email: admin@cinebook.com
+Password: password
+
+---
+
 ## Local Installation Guide
 
 Before running the project locally, make sure PHP 8.2 or higher, Composer, Node.js, npm, and MySQL are installed.
