@@ -27,6 +27,7 @@
                             <h3 class="text-xl font-bold text-[#020617] mb-2">Pay with Stripe</h3>
                             <p class="text-sm text-slate-500 mb-6">Secure checkout via Stripe (test mode). Card details are handled by Stripe — not stored in this app.</p>
                             <form action="{{ route('bookings.payment.stripe', data_get($booking, 'id')) }}" method="POST" class="relative z-10 pointer-events-auto">
+                                {{-- Prevent Cross-Site Request Forgery using CSRF token validation --}}
                                 @csrf
                                 <div class="flex items-start gap-3 mb-6">
                                     <input type="checkbox" id="accept_terms_stripe" name="accept_terms" value="1" required class="w-4 h-4 mt-1 accent-[#020617] cursor-pointer">
@@ -45,6 +46,7 @@
                         <p class="text-sm text-white/70 mb-6">Mock card form for local testing (no real charges).</p>
                         <div id="payment-error" class="hidden mb-6 rounded-xl border border-red-300 bg-red-50 p-4 text-sm font-semibold text-red-700" role="alert"></div>
                         <form action="{{ route('bookings.confirm', data_get($booking, 'id')) }}" method="POST" id="payment-form" class="relative z-10 pointer-events-auto">
+                            {{-- Prevent Cross-Site Request Forgery using CSRF token validation --}}
                             @csrf
 
                             <!-- Payment Method -->
@@ -309,6 +311,7 @@
                     method: 'POST',
                     credentials: 'include',
                     headers: {
+                        {{-- Prevent Cross-Site Request Forgery using CSRF token validation on AJAX requests --}}
                         'X-CSRF-TOKEN': '{{ csrf_token() }}',
                         'Accept': 'application/json',
                         'Content-Type': 'application/json',

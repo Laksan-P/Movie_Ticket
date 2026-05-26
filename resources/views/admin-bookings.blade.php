@@ -94,7 +94,7 @@
                                     </td>
                                     <td class="py-4 px-3">
                                         <span
-                                            class="inline-block px-3 py-1 rounded-md text-[10px] font-bold {{ $booking->status == 'confirmed' ? 'bg-green-700 text-white' : 'bg-red-700 text-white' }}">
+                                            class="inline-block px-3 py-1 rounded-md text-[10px] font-bold {{ $booking->status === 'confirmed' ? 'bg-green-700 text-white' : ($booking->status === 'pending' ? 'bg-amber-600 text-white' : 'bg-red-700 text-white') }}">
                                             {{ ucfirst($booking->status) }}
                                         </span>
                                     </td>

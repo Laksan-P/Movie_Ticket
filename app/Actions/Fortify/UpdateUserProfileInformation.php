@@ -20,19 +20,24 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
         Validator::make($input, [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'photo' => ['nullable', 'mimes:jpg,jpeg,png', 'max:1024'],
+            // Validate uploaded image type and size for security
+            'photo' => ['nullable', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ])->validateWithBag('updateProfileInformation');
 
         if (isset($input['photo'])) {
             $user->updateProfilePhoto($input['photo']);
         }
 
+        // Sanitize user-generated input to prevent XSS attacks
+        $cleanName = strip_tags($input['name']);
+
         if ($input['email'] !== $user->email &&
             $user instanceof MustVerifyEmail) {
-            $this->updateVerifiedUser($user, $input);
+            $this->updateVerifiedUser($user, array_merge($input, ['name' => $cleanName]));
         } else {
+            // Prevent mass assignment vulnerabilities
             $user->forceFill([
-                'name' => $input['name'],
+                'name' => $cleanName,
                 'email' => $input['email'],
             ])->save();
         }

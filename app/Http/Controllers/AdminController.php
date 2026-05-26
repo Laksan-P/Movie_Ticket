@@ -192,7 +192,7 @@ class AdminController extends Controller
 
     public function cancellationsIndex()
     {
-        $bookings = Booking::where('status', 'cancelled')->with(['user', 'showtime.movie', 'showtime.theatre'])->latest()->get();
+        $bookings = Booking::with(['user', 'showtime.movie', 'showtime.theatre'])->latest()->get();
         $title = 'Cancellation Management';
         return view('admin-bookings', compact('bookings', 'title'));
     }

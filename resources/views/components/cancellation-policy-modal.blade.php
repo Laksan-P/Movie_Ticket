@@ -1,5 +1,5 @@
 <div id="cancellation-policy-modal"
-    class="hidden pointer-events-none fixed inset-0 z-[200] flex min-h-screen items-center justify-center px-4 py-8 bg-[#020617]/80 backdrop-blur-md"
+    class="hidden pointer-events-none fixed inset-0 z-[200] min-h-screen items-center justify-center px-4 py-8 bg-[#020617]/80 backdrop-blur-md"
     role="dialog"
     aria-modal="true"
     aria-labelledby="cancellation-policy-modal-title"

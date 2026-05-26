@@ -65,25 +65,7 @@
         <!-- Auth Buttons -->
         <div class="hidden md:flex items-center gap-4 relative z-20">
             @auth
-                <div class="flex items-center gap-4">
-                    <span class="text-white font-medium">
-                        Hello, <span class="text-[#f3e9dc]">{{ Auth::user()->name }}</span>
-                    </span>
-                    @if(Auth::user()->role === 'admin')
-                        <a href="{{ route('admin.dashboard') }}" class="text-[#c08552] font-semibold hover:text-[#f3e9dc] transition-colors">
-                            Admin Panel
-                        </a>
-                    @endif
-                    <a href="{{ route('bookings.index') }}" class="text-[#c08552] font-medium hover:text-[#f3e9dc] transition-colors no-underline">
-                        My Bookings
-                    </a>
-                    <form method="POST" action="{{ route('logout') }}" class="inline">
-                        @csrf
-                        <button type="submit" class="bg-transparent border-none cursor-pointer px-4 py-2 rounded-full border border-gray-600 text-sm font-medium text-gray-300 hover:text-white hover:border-gray-400 transition-all">
-                            Logout
-                        </button>
-                    </form>
-                </div>
+                <x-profile-dropdown />
             @else
                 <a href="{{ route('login') }}" class="text-sm font-medium text-gray-400 hover:text-white transition-colors no-underline">
                     Login
@@ -115,7 +97,12 @@
         <a href="{{ route('home') }}" class="py-4 text-2xl font-bold no-underline {{ request()->routeIs('home') ? 'text-[#EDEDCE] relative after:content-[\'\'] after:absolute after:left-0 after:bottom-2 after:w-8 after:h-[2px] after:bg-[#EDEDCE]' : 'text-white' }}">Home</a>
         <a href="{{ route('theatres.index') }}" class="py-4 text-2xl font-bold no-underline {{ request()->routeIs('theatres.*') ? 'text-[#EDEDCE] relative after:content-[\'\'] after:absolute after:left-0 after:bottom-2 after:w-8 after:h-[2px] after:bg-[#EDEDCE]' : 'text-white' }}">Theatres</a>
         @auth
+            <a href="{{ route('profile.index') }}" class="py-4 text-2xl font-bold no-underline text-white">Profile</a>
+            <a href="{{ route('profile.security') }}" class="py-4 text-2xl font-bold no-underline text-white">Security</a>
             <a href="{{ route('bookings.index') }}" class="py-4 text-2xl font-bold no-underline text-white">My Bookings</a>
+            @if(Auth::user()->role === 'admin')
+                <a href="{{ route('admin.dashboard') }}" class="py-4 text-2xl font-bold no-underline text-[#c08552]">Admin Panel</a>
+            @endif
             <form method="POST" action="{{ route('logout') }}" class="w-full">
                 @csrf
                 <button type="submit" class="w-full py-4 rounded-full bg-white/10 text-white font-bold border border-white/10 hover:bg-white hover:text-[#01161e] transition-all cursor-pointer">

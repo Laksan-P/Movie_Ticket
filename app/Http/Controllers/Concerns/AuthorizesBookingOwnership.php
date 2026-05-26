@@ -7,6 +7,9 @@ use Illuminate\Http\JsonResponse;
 
 trait AuthorizesBookingOwnership
 {
+    /**
+     * Prevent unauthorized booking access — users may only act on their own bookings (admins exempt).
+     */
     protected function authorizeBookingAccess(Booking $booking): void
     {
         $user = auth()->user();
@@ -24,6 +27,9 @@ trait AuthorizesBookingOwnership
         }
     }
 
+    /**
+     * Prevent unauthorized booking access for API requests (returns JSON 401/403 instead of abort).
+     */
     protected function authorizeBookingAccessJson(Booking $booking): ?JsonResponse
     {
         $user = auth()->user();

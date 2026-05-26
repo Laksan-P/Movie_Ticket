@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\MovieController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\StripePaymentController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -63,6 +64,12 @@ Route::middleware([
     Route::get('/payment/{booking}/stripe/cancel', [StripePaymentController::class, 'cancel'])->name('bookings.payment.stripe.cancel');
     Route::get('/cancellation/{booking}', [BookingController::class, 'showCancellation'])->name('bookings.cancel');
     Route::post('/cancellation/{booking}/confirm', [BookingController::class, 'confirmCancellation'])->name('bookings.cancel.confirm');
+
+    // Profile (customers and admins)
+    Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
+    Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::get('/profile/security', [ProfileController::class, 'security'])->name('profile.security');
 });
 
 // Admin Routes

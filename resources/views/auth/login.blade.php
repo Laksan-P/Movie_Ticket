@@ -54,6 +54,7 @@
                             @endif
 
                             <form class="space-y-5" method="POST" action="{{ route('login') }}">
+                                {{-- Prevent Cross-Site Request Forgery using CSRF token validation --}}
                                 @csrf
                                 <div>
                                     <label for="login-email"
@@ -103,6 +104,7 @@
                             </div>
 
                             <form class="space-y-4" method="POST" action="{{ route('register') }}">
+                                {{-- Prevent Cross-Site Request Forgery using CSRF token validation --}}
                                 @csrf
                                 <div>
                                     <label for="reg-name" class="block text-sm font-semibold text-gray-700 mb-1">Full
@@ -231,43 +233,8 @@
             }
         }
 
-        // API Integration for Login and Register
+        // Registration still uses the API; login uses Fortify session auth (supports 2FA).
         document.addEventListener('DOMContentLoaded', function() {
-            // Handle Login
-            const loginForm = document.querySelector('form[action*="login"]');
-            if (loginForm) {
-                loginForm.addEventListener('submit', async function(e) {
-                    e.preventDefault();
-                    const formData = new FormData(this);
-                    const payload = Object.fromEntries(formData.entries());
-                    payload.device_name = 'web';
-
-                    try {
-                        const response = await fetch("{{ url('/api/login') }}", {
-                            method: 'POST',
-                            credentials: 'include',
-                            headers: {
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                'Accept': 'application/json',
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify(payload)
-                        });
-
-                        if (response.ok) {
-                            window.location.href = "{{ route('home') }}";
-                        } else {
-                            const errorData = await response.json();
-                            alert(errorData.message || 'Login failed. Please check your credentials.');
-                        }
-                    } catch (error) {
-                        console.error('Error:', error);
-                        alert('An unexpected error occurred during login.');
-                    }
-                });
-            }
-
-            // Handle Register
             const registerForm = document.querySelector('form[action*="register"]');
             if (registerForm) {
                 registerForm.addEventListener('submit', async function(e) {
@@ -280,6 +247,7 @@
                             method: 'POST',
                             credentials: 'include',
                             headers: {
+                                {{-- Prevent Cross-Site Request Forgery using CSRF token validation on AJAX requests --}}
                                 'X-CSRF-TOKEN': '{{ csrf_token() }}',
                                 'Accept': 'application/json',
                                 'Content-Type': 'application/json'

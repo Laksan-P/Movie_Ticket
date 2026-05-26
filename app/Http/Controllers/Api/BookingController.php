@@ -33,6 +33,7 @@ class BookingController extends Controller
 
     public function store(Request $request)
     {
+        // Validate incoming request data before processing
         $request->validate([
             'showtime_id' => 'required|exists:showtimes,id',
             'seats' => 'required|string',
@@ -59,10 +60,12 @@ class BookingController extends Controller
 
     public function confirmPayment(Request $request, Booking $booking)
     {
+        // Prevent unauthorized booking access
         if ($response = $this->authorizeBookingAccessJson($booking)) {
             return $response;
         }
 
+        // Validate incoming request data before processing (payment security — no CVV stored)
         $request->validate([
             'payment_method' => 'nullable|in:debit_card,credit_card',
             'card_number' => 'nullable|string',
@@ -86,19 +89,25 @@ class BookingController extends Controller
 
     public function cancelBooking(Request $request, Booking $booking)
     {
+        // Prevent unauthorized booking access
         if ($response = $this->authorizeBookingAccessJson($booking)) {
             return $response;
         }
 
+        // Validate incoming request data before processing
         $request->validate([
             'reason' => 'required|string|max:255',
             'comments' => 'nullable|string|max:1000',
         ]);
 
+        // Prevent XSS attacks by sanitizing user input before storage
+        $cleanReason = strip_tags($request->reason);
+        $cleanComments = $request->comments ? strip_tags($request->comments) : null;
+
         $result = $this->bookingService->cancelBooking(
             $booking,
-            $request->reason,
-            $request->comments
+            $cleanReason,
+            $cleanComments
         );
 
         $data = [];

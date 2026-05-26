@@ -20,11 +20,13 @@ class StripePaymentController extends Controller
 
     protected function stripeConfigured(): bool
     {
+        // Secure environment variable usage — Stripe keys loaded from config/services.php (.env)
         return filled(config('services.stripe.secret')) && filled(config('services.stripe.key'));
     }
 
     public function createCheckoutSession(Request $request, Booking $booking)
     {
+        // Prevent unauthorized booking access
         $this->authorizeBookingAccess($booking);
 
         if (! $this->stripeConfigured()) {
@@ -37,10 +39,12 @@ class StripePaymentController extends Controller
                 ->with('error', 'This booking can no longer be paid.');
         }
 
+        // Validate incoming request data before processing
         $request->validate([
             'accept_terms' => 'accepted',
         ]);
 
+        // Secure environment variable usage — Stripe secret key never hard-coded
         Stripe::setApiKey(config('services.stripe.secret'));
 
         $booking->load(['showtime.movie', 'user']);
@@ -55,6 +59,7 @@ class StripePaymentController extends Controller
         $customerEmail = $booking->user?->email ?? auth()->user()->email;
 
         try {
+            // Payment security — card data handled by Stripe Checkout; app stores metadata only
             $session = Session::create([
                 'mode' => 'payment',
                 'customer_email' => $customerEmail,
@@ -101,6 +106,7 @@ class StripePaymentController extends Controller
 
     public function success(Request $request, Booking $booking)
     {
+        // Prevent unauthorized booking access
         $this->authorizeBookingAccess($booking);
 
         if (! $this->stripeConfigured()) {
@@ -125,6 +131,7 @@ class StripePaymentController extends Controller
                 ->with('error', 'Could not verify Stripe payment.');
         }
 
+        // Payment security — verify session belongs to this booking (prevent callback tampering)
         if ((string) ($session->metadata['booking_id'] ?? '') !== (string) $booking->id) {
             abort(403);
         }
@@ -138,6 +145,7 @@ class StripePaymentController extends Controller
             ? $session->payment_intent
             : ($session->payment_intent->id ?? null);
 
+        // Idempotent confirmation via BookingService (no double confirm / double seat reduction)
         $result = $this->bookingService->confirmPayment($booking, [
             'gateway' => 'stripe',
             'stripe_session_id' => $session->id,
@@ -161,6 +169,7 @@ class StripePaymentController extends Controller
 
     public function cancel(Booking $booking)
     {
+        // Prevent unauthorized booking access
         $this->authorizeBookingAccess($booking);
 
         return redirect()->route('bookings.payment', $booking)

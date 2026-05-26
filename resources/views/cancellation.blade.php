@@ -61,6 +61,7 @@
                         <!-- Cancellation Form -->
                         <form action="{{ route('bookings.cancel.confirm', data_get($booking, 'id')) }}" method="POST"
                             id="cancellation-form" class="space-y-6 relative z-10 pointer-events-auto">
+                            {{-- Prevent Cross-Site Request Forgery using CSRF token validation --}}
                             @csrf
                             <div>
                                 <label for="reason" class="block text-sm font-bold text-white mb-3">Reason for
@@ -228,6 +229,7 @@
                         method: 'POST',
                         credentials: 'include',
                         headers: {
+                            {{-- Prevent Cross-Site Request Forgery using CSRF token validation on AJAX requests --}}
                             'X-CSRF-TOKEN': '{{ csrf_token() }}',
                             'Accept': 'application/json',
                             'Content-Type': 'application/json',

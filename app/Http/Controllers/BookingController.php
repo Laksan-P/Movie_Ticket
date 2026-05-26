@@ -20,6 +20,7 @@ class BookingController extends Controller
     {
         $userId = auth()->id();
 
+        // Prevent SQL Injection using Laravel Eloquent ORM (scoped user bookings)
         $activeBookings = Booking::query()
             ->forUser($userId)
             ->withShowtimeDetails()
@@ -53,6 +54,7 @@ class BookingController extends Controller
 
     public function store(Request $request)
     {
+        // Validate incoming request data before processing
         $request->validate([
             'showtime_id' => 'required|exists:showtimes,id',
             'seats' => 'required|string',
@@ -71,6 +73,7 @@ class BookingController extends Controller
 
     public function showPayment(Booking $booking)
     {
+        // Prevent unauthorized booking access
         $this->authorizeBookingAccess($booking);
         $booking->load(['showtime.movie', 'showtime.theatre']);
 
@@ -79,8 +82,10 @@ class BookingController extends Controller
 
     public function confirmPayment(Request $request, Booking $booking)
     {
+        // Prevent unauthorized booking access
         $this->authorizeBookingAccess($booking);
 
+        // Validate incoming request data before processing (payment security — no CVV stored)
         $request->validate([
             'payment_method' => 'nullable|in:debit_card,credit_card',
             'card_number' => 'nullable|string',
@@ -101,6 +106,7 @@ class BookingController extends Controller
 
     public function showCancellation(Booking $booking)
     {
+        // Prevent unauthorized booking access
         $this->authorizeBookingAccess($booking);
         $booking->load(['showtime.movie', 'showtime.theatre']);
 
@@ -113,17 +119,23 @@ class BookingController extends Controller
 
     public function confirmCancellation(Request $request, Booking $booking)
     {
+        // Prevent unauthorized booking access
         $this->authorizeBookingAccess($booking);
 
+        // Validate incoming request data before processing
         $request->validate([
             'reason' => 'required|string',
             'comments' => 'nullable|string',
         ]);
 
+        // Prevent XSS attacks by sanitizing user input before storage
+        $cleanReason = strip_tags($request->reason);
+        $cleanComments = $request->comments ? strip_tags($request->comments) : null;
+
         $result = $this->bookingService->cancelBooking(
             $booking,
-            $request->reason,
-            $request->comments
+            $cleanReason,
+            $cleanComments
         );
 
         if (! $result['success']) {
