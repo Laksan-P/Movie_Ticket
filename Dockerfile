@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y \
     nodejs \
     npm
 
-RUN docker-php-ext-install pdo pdo_mysql zip
+RUN docker-php-ext-install pdo pdo_pgsql pgsql zip
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
@@ -20,6 +20,10 @@ COPY . .
 RUN composer install --no-dev --optimize-autoloader
 
 RUN npm install && npm run build
+
+RUN php artisan migrate --force
+
+RUN php artisan db:seed --force
 
 EXPOSE 10000
 
