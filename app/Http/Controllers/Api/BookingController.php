@@ -104,24 +104,18 @@ class BookingController extends Controller
         $cleanReason = strip_tags($request->reason);
         $cleanComments = $request->comments ? strip_tags($request->comments) : null;
 
-        $result = $this->bookingService->cancelBooking(
+        $result = $this->bookingService->requestCancellation(
             $booking,
             $cleanReason,
             $cleanComments
         );
 
-        $data = [];
-        if (isset($result['refund_amount'])) {
-            $data['refund_amount'] = $result['refund_amount'];
-        }
-        if (isset($result['booking'])) {
-            $data['booking'] = $result['booking'];
+        if (! $result['success']) {
+            return $this->jsonError($result['message'], $result['status']);
         }
 
-        if ($result['success']) {
-            return $this->jsonSuccess($result['message'], $data ?: null, $result['status']);
-        }
-
-        return $this->jsonError($result['message'], $result['status'], null);
+        return $this->jsonSuccess($result['message'], [
+            'booking' => $result['booking'],
+        ]);
     }
 }

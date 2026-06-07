@@ -2,14 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Booking;
+use App\Models\Cancellation;
 use App\Models\Movie;
 use App\Models\Theatre;
-use App\Models\Cancellation;
+use App\Services\BookingService;
+use App\Support\BookingStatus;
+use Illuminate\Http\Request;
 
 class AdminController extends Controller
 {
+    public function __construct(
+        protected BookingService $bookingService
+    ) {}
+
     public function dashboard()
     {
         $totalBookings = Booking::count();
@@ -17,7 +23,8 @@ class AdminController extends Controller
         $confirmedRevenue = Booking::where('status', 'confirmed')->sum('total_price');
         $cancellationFees = Cancellation::sum('cancellation_fee');
         $totalRevenue = $confirmedRevenue + $cancellationFees;
-        $totalCancellations = Booking::where('status', 'cancelled')->count();
+        $pendingCancellations = Booking::where('status', BookingStatus::CANCELLATION_REQUESTED)->count();
+        $totalCancellations = Booking::where('status', BookingStatus::CANCELLED)->count();
         $totalTheatres = Theatre::count();
         $totalMovies = Movie::count();
 
@@ -33,6 +40,7 @@ class AdminController extends Controller
             'totalBookings', 
             'confirmedBookings', 
             'totalRevenue', 
+            'pendingCancellations',
             'totalCancellations', 
             'totalTheatres', 
             'totalMovies', 
@@ -192,8 +200,42 @@ class AdminController extends Controller
 
     public function cancellationsIndex()
     {
-        $bookings = Booking::with(['user', 'showtime.movie', 'showtime.theatre'])->latest()->get();
-        $title = 'Cancellation Management';
-        return view('admin-bookings', compact('bookings', 'title'));
+        $pendingCancellations = Booking::with(['user', 'showtime.movie', 'showtime.theatre', 'cancellation'])
+            ->cancellationRequested()
+            ->latest()
+            ->get();
+
+        $cancelledBookings = Booking::with(['user', 'showtime.movie', 'showtime.theatre', 'cancellation'])
+            ->cancelled()
+            ->latest()
+            ->get();
+
+        return view('admin-cancellations', compact('pendingCancellations', 'cancelledBookings'));
+    }
+
+    public function approveCancellation(Booking $booking)
+    {
+        $result = $this->bookingService->approveCancellationRequest($booking);
+
+        if (! $result['success']) {
+            return redirect()->route('admin.cancellations.index')
+                ->with('error', $result['message']);
+        }
+
+        return redirect()->route('admin.cancellations.index')
+            ->with('success', $result['message']);
+    }
+
+    public function rejectCancellation(Booking $booking)
+    {
+        $result = $this->bookingService->rejectCancellationRequest($booking);
+
+        if (! $result['success']) {
+            return redirect()->route('admin.cancellations.index')
+                ->with('error', $result['message']);
+        }
+
+        return redirect()->route('admin.cancellations.index')
+            ->with('success', $result['message']);
     }
 }

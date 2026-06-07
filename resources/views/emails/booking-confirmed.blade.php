@@ -20,7 +20,7 @@
                 <p style="margin:0 0 8px;font-size:14px;"><strong>Seats:</strong> {{ $booking->seats ?? 'N/A' }}</p>
                 <p style="margin:0 0 8px;font-size:14px;"><strong>Tickets:</strong> {{ $booking->number_of_tickets }}</p>
                 <p style="margin:0 0 8px;font-size:14px;"><strong>Total amount:</strong> LKR {{ number_format($booking->total_price, 2) }}</p>
-                <p style="margin:0;font-size:14px;"><strong>Status:</strong> <span style="color:#15803d;font-weight:bold;">{{ ucfirst($booking->status) }}</span></p>
+                <p style="margin:0;font-size:14px;"><strong>Status:</strong> <span style="color:#15803d;font-weight:bold;">{{ \App\Support\BookingStatus::label($booking->status) }}</span></p>
             </td>
         </tr>
     </table>

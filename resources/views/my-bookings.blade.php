@@ -71,8 +71,7 @@
                             </div>
                             <div class="flex flex-col justify-center gap-3">
                                 <div class="flex items-center gap-2 md:justify-center">
-                                    <div class="w-2 h-2 rounded-full bg-red-500"></div>
-                                    <span class="font-semibold text-red-600">Cancelled</span>
+                                    <x-booking-status-badge :status="$booking->status" soft />
                                 </div>
                                 <p class="text-[10px] text-slate-500 md:text-center mt-2">Cancelled on:<br>{{ data_get($booking, 'updated_at') ? data_get($booking, 'updated_at')->format('M d, Y') : 'N/A' }}</p>
                             </div>

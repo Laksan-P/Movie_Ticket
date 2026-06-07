@@ -132,7 +132,7 @@ class BookingController extends Controller
         $cleanReason = strip_tags($request->reason);
         $cleanComments = $request->comments ? strip_tags($request->comments) : null;
 
-        $result = $this->bookingService->cancelBooking(
+        $result = $this->bookingService->requestCancellation(
             $booking,
             $cleanReason,
             $cleanComments

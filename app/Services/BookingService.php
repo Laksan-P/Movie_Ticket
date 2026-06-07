@@ -8,6 +8,7 @@ use App\Models\Booking;
 use App\Models\Cancellation;
 use App\Models\Payment;
 use App\Models\Showtime;
+use App\Support\BookingStatus;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -22,7 +23,11 @@ class BookingService
     public function getUnavailableSeats(int $showtimeId): array
     {
         return Booking::where('showtime_id', $showtimeId)
-            ->whereIn('status', ['pending', 'confirmed'])
+            ->whereIn('status', [
+                BookingStatus::PENDING,
+                BookingStatus::CONFIRMED,
+                BookingStatus::CANCELLATION_REQUESTED,
+            ])
             ->pluck('seats')
             ->flatMap(fn (string $seats) => array_filter(array_map('trim', explode(',', $seats))))
             ->unique()
@@ -147,11 +152,15 @@ class BookingService
     {
         $booking->loadMissing('showtime');
 
-        if ($booking->status === 'cancelled') {
+        if ($booking->status === BookingStatus::CANCELLED) {
             return 'Booking already cancelled.';
         }
 
-        if (! in_array($booking->status, ['pending', 'confirmed'], true)) {
+        if ($booking->status === BookingStatus::CANCELLATION_REQUESTED) {
+            return 'A cancellation request is already pending for this booking.';
+        }
+
+        if (! in_array($booking->status, [BookingStatus::PENDING, BookingStatus::CONFIRMED], true)) {
             return 'This booking cannot be cancelled.';
         }
 
@@ -172,36 +181,120 @@ class BookingService
         return null;
     }
 
-    public function cancelBooking(Booking $booking, string $reason, ?string $comments = null): array
+    /**
+     * Customer submits a cancellation request (admin must approve).
+     */
+    public function requestCancellation(Booking $booking, string $reason, ?string $comments = null): array
     {
         if ($blockReason = $this->cancellationBlockReason($booking)) {
             return [
                 'success' => false,
                 'message' => $blockReason,
-                'status' => str_contains($blockReason, 'already cancelled') ? 200 : 422,
+                'status' => str_contains($blockReason, 'already') ? 200 : 422,
             ];
         }
 
-        if ($booking->status === 'cancelled') {
+        $reasonText = $reason.($comments ? ' - '.$comments : '');
+
+        return DB::transaction(function () use ($booking, $reasonText) {
+            $booking = Booking::lockForUpdate()->findOrFail($booking->id);
+
+            if ($booking->status === BookingStatus::CANCELLATION_REQUESTED) {
+                return [
+                    'success' => false,
+                    'message' => 'A cancellation request is already pending for this booking.',
+                    'status' => 422,
+                ];
+            }
+
+            $originalAmount = $booking->total_price;
+            $refundAmount = $originalAmount * 0.5;
+            $cancellationFee = $originalAmount * 0.5;
+
+            $booking->update(['status' => BookingStatus::CANCELLATION_REQUESTED]);
+
+            Cancellation::updateOrCreate(
+                ['booking_id' => $booking->id],
+                [
+                    'original_amount' => $originalAmount,
+                    'refund_amount' => $refundAmount,
+                    'cancellation_fee' => $cancellationFee,
+                    'reason' => $reasonText,
+                    'status' => 'pending',
+                    'cancellation_date' => now(),
+                ]
+            );
+
+            $booking = $booking->fresh()->load('showtime.movie', 'showtime.theatre', 'user', 'cancellation');
+
             return [
-                'success' => false,
-                'message' => 'Booking already cancelled.',
+                'success' => true,
+                'message' => 'Cancellation request submitted. An admin will review it shortly.',
+                'booking' => $booking,
                 'status' => 200,
             ];
-        }
+        });
+    }
 
-        if (! in_array($booking->status, ['pending', 'confirmed'], true)) {
+    /**
+     * Admin approves a pending cancellation (finalizes refund + seat release).
+     */
+    public function approveCancellationRequest(Booking $booking): array
+    {
+        if ($booking->status !== BookingStatus::CANCELLATION_REQUESTED) {
             return [
                 'success' => false,
-                'message' => 'This booking cannot be cancelled.',
+                'message' => 'No pending cancellation for this booking.',
                 'status' => 422,
             ];
         }
 
-        return DB::transaction(function () use ($booking, $reason, $comments) {
+        $reason = $booking->cancellation?->reason ?? 'Approved by admin';
+
+        return $this->finalizeCancellation($booking, $reason);
+    }
+
+    /**
+     * Admin rejects a pending cancellation (booking returns to confirmed).
+     */
+    public function rejectCancellationRequest(Booking $booking): array
+    {
+        if ($booking->status !== BookingStatus::CANCELLATION_REQUESTED) {
+            return [
+                'success' => false,
+                'message' => 'No pending cancellation for this booking.',
+                'status' => 422,
+            ];
+        }
+
+        $booking->update(['status' => BookingStatus::CONFIRMED]);
+
+        if ($booking->cancellation) {
+            $booking->cancellation->update(['status' => 'rejected']);
+        }
+
+        return [
+            'success' => true,
+            'message' => 'Cancellation request rejected. Booking remains confirmed.',
+            'booking' => $booking->fresh()->load('showtime.movie', 'showtime.theatre', 'user'),
+            'status' => 200,
+        ];
+    }
+
+    /**
+     * @deprecated Direct cancellation — use requestCancellation for customers.
+     */
+    public function cancelBooking(Booking $booking, string $reason, ?string $comments = null): array
+    {
+        return $this->requestCancellation($booking, $reason, $comments);
+    }
+
+    protected function finalizeCancellation(Booking $booking, string $reason): array
+    {
+        return DB::transaction(function () use ($booking, $reason) {
             $booking = Booking::lockForUpdate()->findOrFail($booking->id);
 
-            if ($booking->status === 'cancelled') {
+            if ($booking->status === BookingStatus::CANCELLED) {
                 return [
                     'success' => false,
                     'message' => 'Booking already cancelled.',
@@ -209,30 +302,28 @@ class BookingService
                 ];
             }
 
-            if (! in_array($booking->status, ['pending', 'confirmed'], true)) {
-                return [
-                    'success' => false,
-                    'message' => 'This booking cannot be cancelled.',
-                    'status' => 422,
-                ];
-            }
+            $wasConfirmed = Payment::where('booking_id', $booking->id)
+                ->where('payment_status', 'completed')
+                ->exists()
+                || $booking->status === BookingStatus::CONFIRMED;
 
-            $wasConfirmed = $booking->status === 'confirmed';
             $originalAmount = $booking->total_price;
             $refundAmount = $originalAmount * 0.5;
             $cancellationFee = $originalAmount * 0.5;
 
-            $booking->update(['status' => 'cancelled']);
+            $booking->update(['status' => BookingStatus::CANCELLED]);
 
-            $cancellation = Cancellation::create([
-                'booking_id' => $booking->id,
-                'original_amount' => $originalAmount,
-                'refund_amount' => $refundAmount,
-                'cancellation_fee' => $cancellationFee,
-                'reason' => $reason.($comments ? ' - '.$comments : ''),
-                'status' => 'approved',
-                'cancellation_date' => now(),
-            ]);
+            $cancellation = Cancellation::updateOrCreate(
+                ['booking_id' => $booking->id],
+                [
+                    'original_amount' => $originalAmount,
+                    'refund_amount' => $refundAmount,
+                    'cancellation_fee' => $cancellationFee,
+                    'reason' => $reason,
+                    'status' => 'approved',
+                    'cancellation_date' => now(),
+                ]
+            );
 
             if ($wasConfirmed) {
                 $showtime = Showtime::lockForUpdate()->findOrFail($booking->showtime_id);
@@ -249,6 +340,7 @@ class BookingService
                 'success' => true,
                 'message' => 'Booking cancelled successfully',
                 'refund_amount' => $refundAmount,
+                'booking' => $booking,
                 'status' => 200,
             ];
         });

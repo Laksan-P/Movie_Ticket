@@ -1,14 +1,19 @@
 @php
+    use App\Support\BookingStatus;
+
     $isPast = ($variant ?? 'active') === 'past';
-    $statusLabel = $isPast
-        ? ($booking->status === 'confirmed' ? 'Completed' : 'Past')
-        : ($booking->status === 'pending' ? 'Pending Payment' : 'Confirmed');
-    $statusColor = $isPast
+    $status = $booking->status;
+    $statusLabel = $isPast && $status === BookingStatus::CONFIRMED
+        ? 'Completed'
+        : ($isPast && $status !== BookingStatus::CONFIRMED
+            ? BookingStatus::label($status)
+            : BookingStatus::label($status));
+    $statusColor = $isPast && $status === BookingStatus::CONFIRMED
         ? 'text-slate-600'
-        : ($booking->status === 'pending' ? 'text-amber-700' : 'text-green-700');
-    $dotColor = $isPast
+        : BookingStatus::textColor($status);
+    $dotColor = $isPast && $status === BookingStatus::CONFIRMED
         ? 'bg-slate-400'
-        : ($booking->status === 'pending' ? 'bg-amber-500' : 'bg-green-500');
+        : BookingStatus::dotColor($status);
     $showtimeFormatted = data_get($booking, 'showtime.showtime')
         ? \Carbon\Carbon::parse(data_get($booking, 'showtime.showtime'))
         : null;
@@ -43,14 +48,20 @@
                 View Details
             </button>
             @if (! $isPast)
-                @if ($booking->status === 'pending')
+                @if ($status === BookingStatus::PENDING)
                     <a href="{{ route('bookings.payment', $booking->id) }}" class="w-full py-2.5 px-4 rounded-lg bg-[#6482AD] text-white font-bold text-center no-underline transition-all">
                         Complete Payment
                     </a>
                 @endif
-                <a href="{{ route('bookings.cancel', $booking->id) }}" class="w-full py-2.5 px-4 rounded-lg bg-[#020617] text-white font-bold text-center no-underline transition-all">
-                    Cancel Booking
-                </a>
+                @if ($status === BookingStatus::CANCELLATION_REQUESTED)
+                    <p class="text-xs text-orange-700 font-semibold text-center px-2">
+                        Cancellation request pending admin review.
+                    </p>
+                @elseif (in_array($status, [BookingStatus::PENDING, BookingStatus::CONFIRMED], true))
+                    <a href="{{ route('bookings.cancel', $booking->id) }}" class="w-full py-2.5 px-4 rounded-lg bg-[#020617] text-white font-bold text-center no-underline transition-all">
+                        Request Cancellation
+                    </a>
+                @endif
             @endif
         </div>
     </div>

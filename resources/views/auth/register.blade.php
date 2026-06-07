@@ -35,7 +35,7 @@
                             <p class="text-gray-500 text-sm">Enter your credentials to continue</p>
                         </div>
 
-                        <form class="space-y-5" method="POST" action="{{ route('login') }}">
+                        <form id="fortify-login-form" class="space-y-5" method="POST" action="{{ route('login.store') }}">
                             @csrf
                             <div>
                                 <label for="login-email" class="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>

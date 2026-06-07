@@ -32,18 +32,18 @@ class AuthController extends Controller
             ]);
         }
 
-        // API login must not bypass Fortify two-factor authentication for web sessions.
+        // Web login (with Fortify 2FA) and API login are intentionally separate.
+        // Never call auth()->guard('web')->login() here — that bypasses
+        // RedirectIfTwoFactorAuthenticatable and would skip /two-factor-challenge.
         if ($user->hasEnabledTwoFactorAuthentication()) {
             throw ValidationException::withMessages([
                 'email' => ['Two-factor authentication is required. Sign in through the web login to verify your code.'],
             ]);
         }
 
-        auth()->guard('web')->login($user, $request->boolean('remember'));
-
         $tokenName = $request->input('device_name', 'api-token');
 
-        // Protect API routes using Laravel Sanctum — issue personal access token
+        // Flutter/mobile clients authenticate with Sanctum bearer tokens only.
         return $this->jsonSuccess('Login successful.', [
             'token' => $user->createToken($tokenName)->plainTextToken,
             'user' => $user,

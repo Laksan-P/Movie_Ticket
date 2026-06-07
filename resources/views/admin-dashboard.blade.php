@@ -30,7 +30,8 @@
             <!-- Cancellations -->
             <div class="bg-[#B0B7B3] border border-gray-200 rounded-xl p-6 shadow-sm">
                 <p class="text-slate-500 text-sm mb-1 uppercase font-bold tracking-wider">Cancellations</p>
-                <p class="text-3xl font-extrabold text-[#020617]">{{ $totalCancellations }}</p>
+                <p class="text-3xl font-extrabold text-red-700">{{ $totalCancellations }}</p>
+                <p class="text-xs text-orange-700 font-bold mt-2">Pending: {{ $pendingCancellations }}</p>
             </div>
 
             <!-- Active Theatres -->
@@ -113,9 +114,7 @@
                                 <td class="py-4 px-4 text-[#020617] font-semibold">{{ $booking->showtime->movie->title }}</td>
                                 <td class="py-4 px-4 text-[#006989] font-bold">LKR {{ number_format($booking->total_price, 2) }}</td>
                                 <td class="py-4 px-4">
-                                    <span class="inline-block px-3 py-1 rounded-md text-[10px] font-bold {{ $booking->status == 'confirmed' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
-                                        {{ ucfirst($booking->status) }}
-                                    </span>
+                                    <x-booking-status-badge :status="$booking->status" :admin="true" soft />
                                 </td>
                             </tr>
                         @endforeach

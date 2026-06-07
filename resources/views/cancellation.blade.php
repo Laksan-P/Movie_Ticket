@@ -14,7 +14,7 @@
                     ← Back to Bookings
                 </a>
                 <h1 class="text-3xl md:text-4xl font-bold mb-2 text-[#020617]">Cancel Booking</h1>
-                <p class="text-slate-500">You can cancel your booking anytime with 50% refund</p>
+                <p class="text-slate-500">Submit a cancellation request for admin review (50% refund if approved)</p>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -47,12 +47,9 @@
                         <div class="mb-8 p-6 bg-white/5 border-l-4 border-red-500 rounded-lg">
                             <h3 class="text-lg font-bold mb-4 text-white">Before You Cancel</h3>
                             <ul class="text-sm text-white/80 space-y-3 list-none p-0">
-                                <li><span class="mr-2 text-red-500 font-bold">•</span> Your booking will be cancelled
-                                    permanently</li>
-                                <li><span class="mr-2 text-red-500 font-bold">•</span> You will receive 50% of your
-                                    ticket price as refund</li>
-                                <li><span class="mr-2 text-red-500 font-bold">•</span> Refund is processed immediately
-                                </li>
+                                <li><span class="mr-2 text-orange-500 font-bold">•</span> Your request will be reviewed by an admin</li>
+                                <li><span class="mr-2 text-orange-500 font-bold">•</span> If approved, you receive 50% of your ticket price as refund</li>
+                                <li><span class="mr-2 text-orange-500 font-bold">•</span> Until approved, your booking status shows as "Cancellation Requested"</li>
                             </ul>
                         </div>
 
@@ -158,9 +155,8 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
                 </svg>
             </div>
-            <h2 class="text-3xl font-black text-[#020617] mb-3 text-center">Cancelled!</h2>
-            <p class="text-slate-500 text-center font-medium leading-relaxed">Your booking has been cancelled. 50%
-                refund is being processed.</p>
+            <h2 class="text-3xl font-black text-[#020617] mb-3 text-center">Request Submitted!</h2>
+            <p class="text-slate-500 text-center font-medium leading-relaxed">Your cancellation request was submitted. An admin will review it and you will be notified once processed.</p>
             <div class="mt-8 flex gap-2">
                 <div class="w-2 h-2 bg-green-600 rounded-full animate-bounce"></div>
                 <div class="w-2 h-2 bg-green-600 rounded-full animate-bounce [animation-delay:-0.15s]"></div>

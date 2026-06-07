@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\BookingStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
@@ -50,19 +51,32 @@ class Booking extends Model
     public function scopeActive(Builder $query): Builder
     {
         return $query
-            ->whereIn('status', ['pending', 'confirmed'])
+            ->whereIn('status', [
+                BookingStatus::PENDING,
+                BookingStatus::CONFIRMED,
+                BookingStatus::CANCELLATION_REQUESTED,
+            ])
             ->whereHas('showtime', fn (Builder $showtimeQuery) => $showtimeQuery->where('showtime', '>=', now()));
     }
 
     public function scopePast(Builder $query): Builder
     {
         return $query
-            ->whereIn('status', ['pending', 'confirmed'])
+            ->whereIn('status', [
+                BookingStatus::PENDING,
+                BookingStatus::CONFIRMED,
+                BookingStatus::CANCELLATION_REQUESTED,
+            ])
             ->whereHas('showtime', fn (Builder $showtimeQuery) => $showtimeQuery->where('showtime', '<', now()));
     }
 
     public function scopeCancelled(Builder $query): Builder
     {
-        return $query->where('status', 'cancelled');
+        return $query->where('status', BookingStatus::CANCELLED);
+    }
+
+    public function scopeCancellationRequested(Builder $query): Builder
+    {
+        return $query->where('status', BookingStatus::CANCELLATION_REQUESTED);
     }
 }

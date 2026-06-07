@@ -53,7 +53,7 @@
                                 </div>
                             @endif
 
-                            <form class="space-y-5" method="POST" action="{{ route('login') }}">
+                            <form id="fortify-login-form" class="space-y-5" method="POST" action="{{ route('login.store') }}">
                                 {{-- Prevent Cross-Site Request Forgery using CSRF token validation --}}
                                 @csrf
                                 <div>

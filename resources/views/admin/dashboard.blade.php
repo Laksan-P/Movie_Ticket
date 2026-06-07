@@ -122,10 +122,7 @@
                                         {{ number_format($booking->total_price, 2) }}
                                     </td>
                                     <td class="py-4 px-4">
-                                        <span
-                                            class="inline-block px-3 py-1 rounded-md text-[10px] font-bold {{ $booking->status == 'confirmed' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
-                                            {{ ucfirst($booking->status) }}
-                                        </span>
+                                        <x-booking-status-badge :status="$booking->status" :admin="true" soft />
                                     </td>
                                 </tr>
                             @endforeach

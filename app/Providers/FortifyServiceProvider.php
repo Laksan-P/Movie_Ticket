@@ -11,7 +11,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Laravel\Fortify\Actions\AttemptToAuthenticate;
+use Laravel\Fortify\Actions\CanonicalizeUsername;
+use Laravel\Fortify\Actions\EnsureLoginIsNotThrottled;
+use Laravel\Fortify\Actions\PrepareAuthenticatedSession;
 use Laravel\Fortify\Actions\RedirectIfTwoFactorAuthenticatable;
+use Laravel\Fortify\Contracts\RedirectsIfTwoFactorAuthenticatable;
+use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
 
 class FortifyServiceProvider extends ServiceProvider
@@ -48,6 +54,20 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
         Fortify::redirectUserForTwoFactorAuthenticationUsing(RedirectIfTwoFactorAuthenticatable::class);
 
+        // Keep Fortify's default login pipeline so RedirectIfTwoFactorAuthenticatable always runs
+        // before AttemptToAuthenticate. Custom Auth::attempt()/guard->login() flows bypass 2FA.
+        Fortify::authenticateThrough(function (Request $request) {
+            return array_filter([
+                config('fortify.limiters.login') ? null : EnsureLoginIsNotThrottled::class,
+                config('fortify.lowercase_usernames') ? CanonicalizeUsername::class : null,
+                Features::enabled(Features::twoFactorAuthentication())
+                    ? RedirectsIfTwoFactorAuthenticatable::class
+                    : null,
+                AttemptToAuthenticate::class,
+                PrepareAuthenticatedSession::class,
+            ]);
+        });
+
         // Prevent brute force login attempts using Laravel rate limiting (5 per minute per email/IP)
         RateLimiter::for('login', function (Request $request) {
             $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());
@@ -58,18 +78,6 @@ class FortifyServiceProvider extends ServiceProvider
         // Prevent brute force two-factor authentication attempts using Laravel rate limiting
         RateLimiter::for('two-factor', function (Request $request) {
             return Limit::perMinute(5)->by($request->session()->get('login.id'));
-        });
-
-        Fortify::authenticateUsing(function (Request $request) {
-            // Prevent SQL Injection using Laravel Eloquent ORM (parameterized queries)
-            $user = \App\Models\User::where('email', $request->email)->first();
-
-            // Secure password verification using Laravel Hash facade (bcrypt)
-            if ($user &&
-                $user->email === $request->email &&
-                \Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
-                return $user;
-            }
         });
     }
 }

@@ -77,6 +77,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/bookings', [AdminController::class, 'bookings'])->name('bookings.index');
     Route::get('/cancellations', [AdminController::class, 'cancellationsIndex'])->name('cancellations.index');
+    Route::post('/cancellations/{booking}/approve', [AdminController::class, 'approveCancellation'])->name('cancellations.approve');
+    Route::post('/cancellations/{booking}/reject', [AdminController::class, 'rejectCancellation'])->name('cancellations.reject');
     
     // Movies
     Route::get('/movies', [AdminController::class, 'index'])->name('movies.index');

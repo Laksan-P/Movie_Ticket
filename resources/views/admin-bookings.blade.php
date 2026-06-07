@@ -14,7 +14,7 @@
             </div>
 
             <!-- Statistics -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <div class="bg-[#B0B7B3] border border-gray-200 rounded-xl p-6 shadow-sm">
                     <p class="text-[#020617]/70 text-sm mb-2 font-bold uppercase tracking-wider">Total Bookings</p>
                     <p class="text-3xl font-extrabold text-[#020617]">{{ count($bookings) }}</p>
@@ -23,6 +23,12 @@
                     <p class="text-[#020617]/70 text-sm mb-2 font-bold uppercase tracking-wider">Confirmed</p>
                     <p class="text-3xl font-extrabold text-green-700">
                         {{ collect($bookings)->where('status', 'confirmed')->count() }}
+                    </p>
+                </div>
+                <div class="bg-[#B0B7B3] border border-gray-200 rounded-xl p-6 shadow-sm">
+                    <p class="text-[#020617]/70 text-sm mb-2 font-bold uppercase tracking-wider">Pending Cancellations</p>
+                    <p class="text-3xl font-extrabold text-orange-700">
+                        {{ collect($bookings)->where('status', 'cancellation_requested')->count() }}
                     </p>
                 </div>
                 <div class="bg-[#B0B7B3] border border-gray-200 rounded-xl p-6 shadow-sm">
@@ -93,10 +99,7 @@
                                         {{ $booking->created_at->format('M d, Y') }}
                                     </td>
                                     <td class="py-4 px-3">
-                                        <span
-                                            class="inline-block px-3 py-1 rounded-md text-[10px] font-bold {{ $booking->status === 'confirmed' ? 'bg-green-700 text-white' : ($booking->status === 'pending' ? 'bg-amber-600 text-white' : 'bg-red-700 text-white') }}">
-                                            {{ ucfirst($booking->status) }}
-                                        </span>
+                                        <x-booking-status-badge :status="$booking->status" :admin="true" />
                                     </td>
                                 </tr>
                             @endforeach
