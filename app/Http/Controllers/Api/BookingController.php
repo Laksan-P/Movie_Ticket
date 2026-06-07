@@ -22,7 +22,7 @@ class BookingController extends Controller
     public function index()
     {
         $bookings = auth()->user()->bookings()
-            ->with('showtime.movie', 'showtime.theatre')
+            ->with(['showtime.movie', 'showtime.theatre', 'cancellation'])
             ->latest()
             ->get();
 

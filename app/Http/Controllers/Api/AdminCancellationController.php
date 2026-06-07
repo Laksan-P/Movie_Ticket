@@ -17,7 +17,7 @@ class AdminCancellationController extends Controller
 
     public function pending()
     {
-        $bookings = Booking::with(['user', 'showtime.movie', 'showtime.theatre'])
+        $bookings = Booking::with(['user', 'showtime.movie', 'showtime.theatre', 'cancellation'])
             ->where('status', 'cancellation_requested')
             ->latest()
             ->get();

@@ -190,7 +190,7 @@ class BookingService
             return [
                 'success' => false,
                 'message' => $blockReason,
-                'status' => str_contains($blockReason, 'already') ? 200 : 422,
+                'status' => 422,
             ];
         }
 
